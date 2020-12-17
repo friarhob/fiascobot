@@ -1,0 +1,5 @@
+fiasconfig.json
+node_modules/
+*.swp
+*.swo
+*~
