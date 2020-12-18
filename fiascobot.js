@@ -265,16 +265,98 @@ function startGame(message, params) {
     "<@" + message.author.id + "> game started. Setup phase."
   );
 
-  servers[message.guild.id][message.channel.id].dicepool.values = diceroll(
+  //Setup phase
+  //Rolling dice
+  servers[message.guild.id][message.channel.id].dicepool.values = rollDice(
     Object.keys(servers[message.guild.id][message.channel.id].players).length *
       4
   );
 
+  //adding dice colours
   servers[message.guild.id][message.channel.id].dicepool.white = servers[
     message.guild.id
   ][message.channel.id].dicepool.black =
     Object.keys(servers[message.guild.id][message.channel.id].players).length *
     2;
+
+  //calling first Setup
+  setupPhase(message, params);
+}
+
+function availableSetups(message, type) {
+  var res = "";
+  for (var i = 1; i <= 6; i++) {
+    if (
+      servers[message.guild.id][message.channel.id].dicepool.values.filter(
+        x => x === i
+      ).length >= 1
+    ) {
+      res += `
+__(${i}) ${
+        servers[message.guild.id][message.channel.id].playset[type][
+          i.toString()
+        ]["type"]
+      }__`;
+      for (var j = 1; j <= 6; j++) {
+        if (
+          (i == j &&
+            servers[message.guild.id][
+              message.channel.id
+            ].dicepool.values.filter(x => x === j).length >= 2) ||
+          (i != j &&
+            servers[message.guild.id][
+              message.channel.id
+            ].dicepool.values.filter(x => x === j).length >= 1)
+        ) {
+          res += `
+(${i},${j}) ${
+            servers[message.guild.id][message.channel.id].playset[type][
+              i.toString()
+            ]["descriptions"][j.toString()]
+          }`;
+        }
+      }
+    }
+  }
+  return res;
+}
+
+function setupPhase(message, params) {
+  if (
+    servers[message.guild.id][message.channel.id].dicepool.values.length == 0
+  ) {
+    logging("setupPhase called without dice in pool", (type = "ERROR"));
+    return;
+  }
+  if (servers[message.guild.id][message.channel.id].gameStatus != 1) {
+    logging("setupPhase called out of setup phase", (type = "ERROR"));
+    return;
+  }
+
+  // message.channel.send(
+  //   "Object: " +
+  //     servers[message.guild.id][message.channel.id].playset["relationships"][
+  //       "1"
+  //     ]["descriptions"]["1"]
+  // );
+
+  message.channel.send(
+    "Dice Pool available: " +
+      servers[message.guild.id][message.channel.id].dicepool.values
+  );
+
+  message.channel.send(
+    "**Available Relationships**" + availableSetups(message, "relationships")
+  );
+  message.channel.send(
+    "**Available Needs**" + availableSetups(message, "needs")
+  );
+  message.channel.send(
+    "**Available Locations**" + availableSetups(message, "locations")
+  );
+  message.channel.send(
+    "**Available Objects**" + availableSetups(message, "objects")
+  );
 }
 
 function abortGame(message, params) {
