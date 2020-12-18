@@ -279,11 +279,11 @@ function startGame(message, params) {
     Object.keys(servers[message.guild.id][message.channel.id].players).length *
     2;
 
-  //calling first Setup
-  setupPhase(message, params);
+  //list initial available setups
+  availableSetups(message, params);
 }
 
-function availableSetups(message, type) {
+function availableSetupsPerType(message, type) {
   var res = "";
   for (var i = 1; i <= 6; i++) {
     if (
@@ -321,7 +321,7 @@ __(${i}) ${
   return res;
 }
 
-function setupPhase(message, params) {
+function availableSetups(message, params) {
   if (
     servers[message.guild.id][message.channel.id].dicepool.values.length == 0
   ) {
@@ -329,7 +329,11 @@ function setupPhase(message, params) {
     return;
   }
   if (servers[message.guild.id][message.channel.id].gameStatus != 1) {
-    logging("setupPhase called out of setup phase", (type = "ERROR"));
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> available setups makes sense just in Setup Phase (run **__!fiasco-status__** to check status of the game)."
+    );
     return;
   }
 
@@ -346,16 +350,17 @@ function setupPhase(message, params) {
   );
 
   message.channel.send(
-    "**Available Relationships**" + availableSetups(message, "relationships")
+    "**Available Relationships**" +
+      availableSetupsPerType(message, "relationships")
   );
   message.channel.send(
-    "**Available Needs**" + availableSetups(message, "needs")
+    "**Available Needs**" + availableSetupsPerType(message, "needs")
   );
   message.channel.send(
-    "**Available Locations**" + availableSetups(message, "locations")
+    "**Available Locations**" + availableSetupsPerType(message, "locations")
   );
   message.channel.send(
-    "**Available Objects**" + availableSetups(message, "objects")
+    "**Available Objects**" + availableSetupsPerType(message, "objects")
   );
 }
 
@@ -383,6 +388,9 @@ function helpMessage(message, params) {
 __!fiasco-add <mentions>__: *adds players mentioned to the channel game (up to 5 players per channel)*
 __!fiasco-remove <mentions>__: *removes players mentioned to the channel game*
 __!fiasco-start__: *starts game (should have at least 3 players)*
+
+**At setup phase:**
+__!fiasco-availablesetups__: *list available setups from dicepool*
 
 **While game is running:**
 __!fiasco-abort__: *abort current game (keeps registered players)*
@@ -539,6 +547,23 @@ client.on("message", function(message) {
             ")."
         );
         abortGame(message, params);
+      } else if (command == "availablesetups") {
+        logging(
+          "User " +
+            message.author.username +
+            " (" +
+            message.author.id +
+            ") asks for available setups on channel " +
+            message.channel.name +
+            " (" +
+            message.channel.id +
+            ") of server " +
+            message.guild.name +
+            " (" +
+            message.guild.id +
+            ")."
+        );
+        availableSetups(message, params);
       } else {
         logging(
           "User " +
