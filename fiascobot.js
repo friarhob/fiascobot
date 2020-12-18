@@ -51,10 +51,11 @@ function updateServers(message) {
       // 4: Second Act
       // 5: Aftermath
       players: {},
-      playset: null,
-      pool: {
-        whiteDice: [],
-        blackDice: []
+      playset: require("./playsets/mainstreet.json"),
+      dicepool: {
+        values: [],
+        white: 0,
+        black: 0
       }
     };
   }
@@ -220,13 +221,22 @@ function checkStatus(message, params) {
   );
 }
 
+function rollDice(n) {
+  var res = [];
+  while (n > 0) {
+    res.push(Math.floor(Math.random() * 6 + 1));
+    n--;
+  }
+  return res;
+}
+
 function startGame(message, params) {
   if (servers[message.guild.id][message.channel.id].gameStatus > 0) {
     logging("start> Game already running.");
     message.channel.send(
       "<@" +
         message.author.id +
-        "> game already running (run **!fiasco-status** to verify the status of a game)."
+        "> game already running (run **!fiasco-status** to verify the status of a game, and **!fiasco-abort** if you want to abort the game)."
     );
     return;
   }
@@ -254,6 +264,17 @@ function startGame(message, params) {
   message.channel.send(
     "<@" + message.author.id + "> game started. Setup phase."
   );
+
+  servers[message.guild.id][message.channel.id].dicepool.values = diceroll(
+    Object.keys(servers[message.guild.id][message.channel.id].players).length *
+      4
+  );
+
+  servers[message.guild.id][message.channel.id].dicepool.white = servers[
+    message.guild.id
+  ][message.channel.id].dicepool.black =
+    Object.keys(servers[message.guild.id][message.channel.id].players).length *
+    2;
 }
 
 function abortGame(message, params) {
@@ -437,6 +458,23 @@ client.on("message", function(message) {
         );
         abortGame(message, params);
       } else {
+        logging(
+          "User " +
+            message.author.username +
+            " (" +
+            message.author.id +
+            ") sent the invalid command " +
+            command +
+            " at " +
+            message.channel.name +
+            " (" +
+            message.channel.id +
+            ") of server " +
+            message.guild.name +
+            " (" +
+            message.guild.id +
+            ")."
+        );
         message.channel.send(
           "<@" +
             message.author.id +

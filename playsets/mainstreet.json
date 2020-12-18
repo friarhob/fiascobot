@@ -1,0 +1,274 @@
+{
+  "relationships": {
+    "1": {
+      "type": "Family",
+      "descriptions": {
+        "1": "Parent-In-law / son or daughter-in-law",
+        "2": "Cousins, or aunt/uncle and niece/nephew",
+        "3": "Siblings",
+        "4": "Parent / child or stepchild",
+        "5": "Grandparent / grandchild",
+        "6": "Distant / unusual / unofficial relatives"
+      }
+    },
+    "2": {
+      "type": "Work",
+      "descriptions": {
+        "1": "Former co-workers",
+        "2": "Current co-workers",
+        "3": "Supervisor / employee",
+        "4": "Mechanic, plumber, decorator, landscaper & client",
+        "5": "Salesman / customer",
+        "6": "Pastor, doctor, lawyer, dentist, drug dealer & client"
+      }
+    },
+    "3": {
+      "type": "Friendship",
+      "descriptions": {
+        "1": "Manipulator / victim",
+        "2": "Old buddies",
+        "3": "Drug friends",
+        "4": "Friendly rivals",
+        "5": "Friends with benefits",
+        "6": "Bitter social adversaries (Church friends)"
+      }
+    },
+    "4": {
+      "type": "Romance",
+      "descriptions": {
+        "1": "Former spouses",
+        "2": "Current spouses",
+        "3": "Life-long crush / Object of crush",
+        "4": "One-time fling",
+        "5": "Lovers",
+        "6": "Former lovers"
+      }
+    },
+    "5": {
+      "type": "Crime",
+      "descriptions": {
+        "1": "Corrupt official / local big shot",
+        "2": "Gambler / bookie",
+        "3": "Thieves (shoplifters, burglars, car thieves)",
+        "4": "Con man / mark",
+        "5": "Hoodlums (racketeers, knuckleheads, delinquents)",
+        "6": "Drug people (dealers, manufacturers, distributors)"
+      }
+    },
+    "6": {
+      "type": "Community",
+      "descriptions": {
+        "1": "Elected officials (Aldermen, mayor, commissioner)",
+        "2": "Civic volunteers (election officials, chamber, clubs)",
+        "3": "Church volunteers (deacons, Sunday school teacher)",
+        "4": "Rec league, minor league, pick-up team sports",
+        "5": "Case worker, parole officer, guardian ad litem / client",
+        "6": "AA/Narcanon sponsor / participant"
+      }
+    }
+  },
+  "needs": {
+    "1": {
+      "type": "To get out",
+      "descriptions": {
+        "1": "...of this town, before they realize you took it",
+        "2": "...of this town, to escape family",
+        "3": "...of the gang",
+        "4": "...of a relationship with a lover",
+        "5": "...of the obligation to a frail relative in your care",
+        "6": "...of a crushing debt coming due"
+      }
+    },
+    "2": {
+      "type": "To get even",
+      "descriptions": {
+        "1": "...with the bad people, who think they are so tough",
+        "2": "...with this town, for what it has turned you into",
+        "3": "...with a police officer",
+        "4": "...with a family member",
+        "5": "...with a co-worker",
+        "6": "...with a rival"
+      }
+    },
+    "3": {
+      "type": "To get rich",
+      "descriptions": {
+        "1": "...through stealing a drug stash",
+        "2": "...through robbing a business",
+        "3": "...through tricking a handicapped guy",
+        "4": "...through the death of an elderly person",
+        "5": "...through political back-scratching",
+        "6": "...through a misplaced suitcase full of cash"
+      }
+    },
+    "4": {
+      "type": "To get respect",
+      "descriptions": {
+        "1": "...from this town, by bringing down the machine",
+        "2": "...from this town, by proving your convictions",
+        "3": "...from your lover, by taking the fall",
+        "4": "...from the police, by turning in your own kin",
+        "5": "...from a family member, by rescuing them from ruin",
+        "6": "...from yourself, by finally doing it once and for all"
+      }
+    },
+    "5": {
+      "type": "To get the truth",
+      "descriptions": {
+        "1": "...about why they are all so shut-mouthed",
+        "2": "...about the Sheriff’s political corruption",
+        "3": "...about why he really came here",
+        "4": "...about what she did behind The Patio",
+        "5": "...about your real parents",
+        "6": "...about the mistake that haunts you"
+      }
+    },
+    "6": {
+      "type": "To get laid",
+      "descriptions": {
+        "1": "...to get it over with",
+        "2": "...by that sweet thing you’ve been thinking on",
+        "3": "...because you need the raise that badly",
+        "4": "...by an old lover, to start over",
+        "5": "...by an old lover, to further your scheme",
+        "6": "...by your sweetheart, who is acting squirrelly"
+      }
+    }
+  },
+  "locations": {
+    "1": {
+      "type": "Main Street",
+      "descriptions": {
+        "1": "Peace Haven church",
+        "2": "El Perro Alto Mexican restaurant",
+        "3": "Royall’s drug store: Pharmacy in the back, soda fountain up front",
+        "4": "Shafter and Hazelbrook, LLC, the only lawyers in town",
+        "5": "Commercial Bank, the only bank in town",
+        "6": "Vantage Services, medical claims processor"
+      }
+    },
+    "2": {
+      "type": "Commerce Street",
+      "descriptions": {
+        "1": "Suds and Duds, coin operated laundromat",
+        "2": "Municipal building, police station, courts and city hall",
+        "3": "Family Medical Clinic, the only doctor in town",
+        "4": "New Outlook tanning salon and weight loss center",
+        "5": "The Patio, a movie picture house",
+        "6": "Bill Rivers’ Pool Room, for pool and illegal gambling"
+      }
+    },
+    "3": {
+      "type": "Out by the Interstate",
+      "descriptions": {
+        "1": "Chicken Hut fast food restaurant",
+        "2": "Davenport’s Tire and Tractor, tire shop and tractor repair",
+        "3": "Rose’s Village Motel, convenient to the highway",
+        "4": "The Quik-Pik, gas station and convenience store",
+        "5": "Durable Paper Goods, paper bag manufacturing plant",
+        "6": "Accurate Automotive, used cars"
+      }
+    },
+    "4": {
+      "type": "Up center road",
+      "descriptions": {
+        "1": "J&K Gravel: Gravel, stone, and quarried materials",
+        "2": "The old fish house, an abandoned roadhouse",
+        "3": "Center Road Animal Care, large animal veterinarian",
+        "4": "Lyman C. Mills Consolidated High School",
+        "5": "Spiller’s, funeral services since 1911",
+        "6": "Charles Green Landscaping, lawn care and excavation"
+      }
+    },
+    "5": {
+      "type": "Out and about",
+      "descriptions": {
+        "1": "Town parking lot beside the freight tracks",
+        "2": "Red Run State Park",
+        "3": "A farmer’s field out past Surry Avenue",
+        "4": "The ball field",
+        "5": "Woods up around Hickory Terrace",
+        "6": "Construction site next to Accurate Automotive"
+      }
+    },
+    "6": {
+      "type": "Residences",
+      "descriptions": {
+        "1": "Van parked behind Royall’s",
+        "2": "Trailer out back of the high school",
+        "3": "Apartment above Suds and Duds",
+        "4": "Farmhouse up Center road",
+        "5": "Split-level ranch on Surry Avenue",
+        "6": "Mansion out by Hickory Terrace"
+      }
+    }
+  },
+  "objects": {
+    "1": {
+      "type": "Untoward",
+      "descriptions": {
+        "1": "Porn stash / sex gear",
+        "2": "Welfare check / food stamps",
+        "3": "Garage full of Amway products",
+        "4": "Mink farm",
+        "5": "Klan outfit / hate paraphernalia",
+        "6": "Eviction notice"
+      }
+    },
+    "2": {
+      "type": "Transportation",
+      "descriptions": {
+        "1": "Golf cart",
+        "2": "New pickup truck",
+        "3": "Panel truck",
+        "4": "Small plane",
+        "5": "Pontoon party boat",
+        "6": "Dirt bike"
+      }
+    },
+    "3": {
+      "type": "Weapon",
+      "descriptions": {
+        "1": "Shotgun",
+        "2": "Machete",
+        "3": "Poisonous snake",
+        "4": "Handgun",
+        "5": "Pipe bomb",
+        "6": "Firefighter’s Halligan tool"
+      }
+    },
+    "4": {
+      "type": "Information",
+      "descriptions": {
+        "1": "Secret recipe",
+        "2": "An overheard conversation",
+        "3": "Legal records",
+        "4": "Love letter",
+        "5": "List written in a Christmas card",
+        "6": "Photographs"
+      }
+    },
+    "5": {
+      "type": "Valuables",
+      "descriptions": {
+        "1": "Drug stash",
+        "2": "Mason jar full of gold coins",
+        "3": "Comic book collection",
+        "4": "Vintage car",
+        "5": "Purebred animal",
+        "6": "Suitcase full of cash"
+      }
+    },
+    "6": {
+      "type": "Sentimental",
+      "descriptions": {
+        "1": "Newborn baby",
+        "2": "War memorabilia",
+        "3": "Roadside accident shrine",
+        "4": "Mathematics trophy",
+        "5": "Wedding ring",
+        "6": "Heirloom silver tea set"
+      }
+    }
+  }
+}
