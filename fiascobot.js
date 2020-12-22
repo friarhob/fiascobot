@@ -121,6 +121,7 @@ function addPlayers(message, params) {
     } else {
       for (const player of playersAdded) {
         servers[message.guild.id][message.channel.id].players[player] = {
+          setups: {},
           whiteDice: 0,
           blackDice: 0
         };
@@ -322,13 +323,8 @@ __(${i}) ${
 }
 
 function availableSetups(message, params) {
-  if (
-    servers[message.guild.id][message.channel.id].dicepool.values.length == 0
-  ) {
-    logging("setupPhase called without dice in pool", (type = "ERROR"));
-    return;
-  }
   if (servers[message.guild.id][message.channel.id].gameStatus != 1) {
+    logging("availableSetups> called out of Setup Phase");
     message.channel.send(
       "<@" +
         message.author.id +
@@ -336,13 +332,15 @@ function availableSetups(message, params) {
     );
     return;
   }
-
-  // message.channel.send(
-  //   "Object: " +
-  //     servers[message.guild.id][message.channel.id].playset["relationships"][
-  //       "1"
-  //     ]["descriptions"]["1"]
-  // );
+  if (
+    servers[message.guild.id][message.channel.id].dicepool.values.length == 0
+  ) {
+    logging(
+      "availableSetups> called during Setup Phase without dice in pool",
+      (type = "ERROR")
+    );
+    return;
+  }
 
   message.channel.send(
     "Dice Pool available: " +
@@ -364,6 +362,194 @@ function availableSetups(message, params) {
   );
 }
 
+function addSetup(message, params) {
+  if (servers[message.guild.id][message.channel.id].gameStatus != 1) {
+    logging("addSetup> called out of Setup Phase");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> add a setup makes sense just in Setup Phase (run **__!fiasco-status__** to check status of the game)."
+    );
+    return;
+  }
+
+  if (params.length < 4) {
+    logging("addSetup> less than 4 parameters");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> **!fiasco-addSetup** usage: *!fiasco-addSetup <type> <player> <typeDie> <detailDie>*."
+    );
+    return;
+  }
+
+  if (!["relationship", "object", "need", "location"].includes(params[0])) {
+    logging("addSetup> type invalid: " + params[0]);
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> " +
+        params[0] +
+        " is not a valid setup. Setup types: *relationship*, *object*, *need* or *location*"
+    );
+    return;
+  }
+
+  if (!(params[1].startsWith("<@") && params[1].endsWith(">"))) {
+    logging("addSetup> player not mentioned: " + params[1]);
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> you should mention the player you'll have a relationship with."
+    );
+    return;
+  }
+
+  var otherPlayer = params[1].slice(2, -1);
+  if (otherPlayer.startsWith("!")) otherPlayer = otherPlayer.slice(1);
+
+  if (otherPlayer === message.author.id) {
+    logging("addSetup> try to create a relationship with itself");
+    message.channel.send(
+      "<@" + message.author.id + "> no one can add a relationship with itself."
+    );
+    return;
+  }
+
+  if (!(otherPlayer in servers[message.guild.id][message.channel.id].players)) {
+    logging(
+      "addSetup> try to create a relationship with a non-player: " +
+        params[1] +
+        ". Players: " +
+        Object.keys(servers[message.guild.id][message.channel.id].players)
+    );
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> " +
+        params[1] +
+        " isn't listed as a player. Use **!fiasco-players** to check who's playing this game."
+    );
+
+    return;
+  }
+
+  if (
+    servers[message.guild.id][message.channel.id].dicepool.values.filter(
+      x => x == params[2]
+    ).length < 1 ||
+    servers[message.guild.id][message.channel.id].dicepool.values.filter(
+      x => x == params[3]
+    ).length < (params[2] != params[3] ? 1 : 2)
+  ) {
+    logging(
+      "addSetup> " +
+        params[2] +
+        " and " +
+        params[3] +
+        " should be valid dice. Available dice: " +
+        servers[message.guild.id][message.channel.id].dicepool.values
+    );
+
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> you should use two dice available in the pool. Use **!fiasco-setupavailable** to check which setups are available."
+    );
+
+    return;
+  }
+
+  //TODO: add setup to players
+  if (
+    !(
+      otherPlayer in
+      servers[message.guild.id][message.channel.id].players[message.author.id]
+        .setups
+    )
+  ) {
+    servers[message.guild.id][message.channel.id].players[
+      message.author.id
+    ].setups[otherPlayer] = [];
+  }
+  if (
+    !(
+      message.author.id in
+      servers[message.guild.id][message.channel.id].players[otherPlayer].setups
+    )
+  ) {
+    servers[message.guild.id][message.channel.id].players[otherPlayer].setups[
+      message.author.id
+    ] = [];
+  }
+
+  /* Remove dice */
+  for (var i = 2; i <= 3; i++) {
+    var index = servers[message.guild.id][
+      message.channel.id
+    ].dicepool.values.indexOf(parseInt(params[i], 10));
+    if (index == -1) {
+      logging(
+        "addSetup> try to remove unexisting die " +
+          params[i] +
+          " from " +
+          servers[message.guild.id][message.channel.id].dicepool.values,
+        (type = "ERROR")
+      );
+      abortGame(message, params);
+      message.channel.send(
+        "Internal error (try to remove unexisting die). Game aborted."
+      );
+      return;
+    }
+    servers[message.guild.id][message.channel.id].dicepool.values.splice(
+      index,
+      1
+    );
+  }
+
+  var setupCreated =
+    params[0] +
+    ": (" +
+    servers[message.guild.id][message.channel.id].playset[params[0] + "s"][
+      params[2]
+    ]["type"] +
+    ") " +
+    servers[message.guild.id][message.channel.id].playset[params[0] + "s"][
+      params[2]
+    ]["descriptions"][params[3]];
+
+  servers[message.guild.id][message.channel.id].players[
+    message.author.id
+  ].setups[otherPlayer].push(setupCreated);
+
+  servers[message.guild.id][message.channel.id].players[otherPlayer].setups[
+    message.author.id
+  ].push(setupCreated);
+
+  logging(
+    "addSetup> setup " +
+      setupCreated +
+      " added to users " +
+      message.author.id +
+      " and " +
+      otherPlayer
+  );
+
+  message.channel.send(
+    "<@" +
+      message.author.id +
+      "> setup added. Run **!fiasco-setups** to list all setups defined and **!fiasco-availablesetups** to check new available setups."
+  );
+
+  if (
+    servers[message.guild.id][message.channel.id].dicepool.values.length == 0
+  ) {
+    servers[message.guild.id][message.channel.id].gameStatus = 2;
+    message.channel.send("Setups defined. Act One started!");
+  }
+}
+
 function abortGame(message, params) {
   if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
     logging("abort> Game already not running.");
@@ -382,6 +568,42 @@ function abortGame(message, params) {
   );
 }
 
+function listSetups(message, params) {
+  if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
+    logging("listSetups> Game not running.");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> game is not running (run **!fiasco-start** to start a new game)."
+    );
+    return;
+  }
+  for (var player in servers[message.guild.id][message.channel.id].players) {
+    var setupsMessage = `<@${player}> setups:`;
+    for (var otherPlayer in servers[message.guild.id][message.channel.id]
+      .players[player].setups) {
+      for (
+        var i = 0;
+        i <
+        servers[message.guild.id][message.channel.id].players[player].setups[
+          otherPlayer
+        ].length;
+        i++
+      ) {
+        setupsMessage +=
+          `
+` +
+          servers[message.guild.id][message.channel.id].players[player].setups[
+            otherPlayer
+          ][i] +
+          ` with <@${otherPlayer}>`;
+      }
+    }
+    message.channel.send(setupsMessage);
+  }
+  logging("listSetups> setups listed.");
+}
+
 function helpMessage(message, params) {
   message.channel.send(`<@${message.author.id}>
 **Before game starts:**
@@ -391,9 +613,12 @@ __!fiasco-start__: *starts game (should have at least 3 players)*
 
 **At setup phase:**
 __!fiasco-availablesetups__: *list available setups from dicepool*
+__!fiasco-addsetup__ <type> <player> <typeDie> <detailDie>: *add a new setup between yourself and player mentioned*
+    **Types:** *relationship, object, need *or* location*
 
 **While game is running:**
 __!fiasco-abort__: *abort current game (keeps registered players)*
+__!fiasco-listsetups__: *list all setups defined*
 
 **At all times:**
 __!fiasco-players__: *list current players in channel game*
@@ -564,6 +789,44 @@ client.on("message", function(message) {
             ")."
         );
         availableSetups(message, params);
+      } else if (command == "addsetup") {
+        logging(
+          "User " +
+            message.author.username +
+            " (" +
+            message.author.id +
+            ") try to add a setup with params " +
+            params +
+            " on channel " +
+            message.channel.name +
+            " (" +
+            message.channel.id +
+            ") of server " +
+            message.guild.name +
+            " (" +
+            message.guild.id +
+            ")."
+        );
+        addSetup(message, params);
+      } else if (command == "setups") {
+        logging(
+          "User " +
+            message.author.username +
+            " (" +
+            message.author.id +
+            ") ask to list setups from " +
+            params +
+            " on channel " +
+            message.channel.name +
+            " (" +
+            message.channel.id +
+            ") of server " +
+            message.guild.name +
+            " (" +
+            message.guild.id +
+            ")."
+        );
+        listSetups(message, params);
       } else {
         logging(
           "User " +
