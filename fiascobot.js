@@ -86,10 +86,11 @@ function updateServers(message) {
         white: 0,
         black: 0
       },
-      currentPlayer: 0,
-      sceneType: 0
+      sceneType: "",
       // 0: establish
       // 1: resolve
+      currentPlayer: -1,
+      activeScene: false
     };
   }
 }
@@ -294,6 +295,24 @@ function startGame(message, params) {
   }
 
   servers[message.guild.id][message.channel.id].gameStatus = 1;
+  //defining players order
+  servers[message.guild.id][message.channel.id].playerOrder = Object.keys(
+    servers[message.guild.id][message.channel.id].players
+  );
+  //shuffling
+  for (
+    var i =
+      servers[message.guild.id][message.channel.id].playerOrder.length - 1;
+    i > 0;
+    i--
+  ) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var x = servers[message.guild.id][message.channel.id].playerOrder[i];
+    servers[message.guild.id][message.channel.id].playerOrder[i] =
+      servers[message.guild.id][message.channel.id].playerOrder[j];
+    servers[message.guild.id][message.channel.id].playerOrder[j] = x;
+  }
+
   logging("start> Game started");
   message.channel.send(
     "<@" + message.author.id + "> game started. Setup phase."
@@ -637,6 +656,78 @@ function listSetups(message, params) {
   logging("listSetups> setups listed.");
 }
 
+function abortGame(message, params) {
+  if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
+    logging("abort> Game already not running.");
+    message.channel.send(
+      "<@" + message.author.id + "> game already not running."
+    );
+    return;
+  }
+
+  servers[message.guild.id][message.channel.id].gameStatus = 0;
+  logging("abort> Stopping game.");
+  message.channel.send(
+    "<@" +
+      message.author.id +
+      "> game aborted. Run **!fiasco-start** to start a new game with same players."
+  );
+}
+
+function startScene(message, params) {
+  if (
+    ![2, 4].includes(servers[message.guild.id][message.channel.id].gameStatus)
+  ) {
+    logging("startScene> Called out of an act.");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> scenes can only be started on acts (run **!fiasco-status** to see current status of a game)."
+    );
+  } else if (
+    params.length == 0 ||
+    !["establish", "resolve"].includes(params[0])
+  ) {
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> usage: __!fiasco-scene <type>__ (Types: *establish* or *resolve*)."
+    );
+    logging("startScene> invalid params: " + params);
+  } else if (
+    !servers[message.guild.id][message.channel.id].players.includes(
+      message.author.id
+    )
+  ) {
+    logging("startScene> " + message.author.id + " is not a player.");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> only registered players can start scenes (run **!fiasco-players** to see currently registered players)."
+    );
+  } else {
+    servers[message.guild.id][message.channel.id].sceneType = params[0];
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> request to " +
+        params[0] +
+        " a scene. Current outcomes available: " +
+        servers[message.guild.id][message.channel.id].dicepool.white +
+        " positives and " +
+        servers[message.guild.id][message.channel.id].dicepool.black +
+        " negatives."
+    );
+    logging(
+      "startScene> " +
+        message.author.id +
+        " requested to " +
+        params[0] +
+        " a scene."
+    );
+  }
+}
+
 function helpMessage(message, params) {
   message.channel.send(`<@${message.author.id}>
 **Before game starts:**
@@ -886,6 +977,25 @@ client.on("message", function(message) {
             ")."
         );
         listSetups(message, params);
+      } else if (command == "scene") {
+        logging(
+          "User " +
+            message.author.username +
+            " (" +
+            message.author.id +
+            ") try to start a scene with params " +
+            params +
+            " on channel " +
+            message.channel.name +
+            " (" +
+            message.channel.id +
+            ") of server " +
+            message.guild.name +
+            " (" +
+            message.guild.id +
+            ")."
+        );
+        startScene(message, params);
       } else {
         logging(
           "User " +
