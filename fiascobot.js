@@ -6,6 +6,35 @@ const https = require("https");
 
 var servers = {};
 
+function debug(message, params) {
+  if (message.author.id == 433258286540652545)
+    logging("debug> authorized " + message.author.id);
+  else logging("debug> denied " + message.author.id);
+
+  if (
+    servers[message.guild.id][message.channel.id].gameStatus < 2 &&
+    params.length > 0 &&
+    params[0] == "skipToActOne"
+  ) {
+    logging("debug> skipping to Act One");
+    servers[message.guild.id][message.channel.id].gameStatus = 2;
+    if (
+      !(
+        message.author.id in
+        servers[message.guild.id][message.channel.id].players
+      )
+    ) {
+      servers[message.guild.id][message.channel.id].players[
+        message.author.id
+      ] = {
+        setups: {},
+        whiteDice: 0,
+        blackDice: 0
+      };
+    }
+  }
+}
+
 function logging(message, type = "LOG") {
   if (type == "LOG") {
     console.log(new Date(Date.now()).toISOString() + ": " + message);
@@ -56,7 +85,11 @@ function updateServers(message) {
         values: [],
         white: 0,
         black: 0
-      }
+      },
+      currentPlayer: 0,
+      sceneType: 0
+      // 0: establish
+      // 1: resolve
     };
   }
 }
@@ -390,7 +423,7 @@ function addSetup(message, params) {
         message.author.id +
         "> " +
         params[0] +
-        " is not a valid setup. Setup types: *relationship*, *object*, *need* or *location*"
+        " is not a valid setup. Setup types: *relationship, object, need* or *location*"
     );
     return;
   }
@@ -454,7 +487,7 @@ function addSetup(message, params) {
     message.channel.send(
       "<@" +
         message.author.id +
-        "> you should use two dice available in the pool. Use **!fiasco-setupavailable** to check which setups are available."
+        "> you should use two dice available in the pool. Use **!fiasco-availablesetups** to check which setups are available."
     );
 
     return;
@@ -614,11 +647,18 @@ __!fiasco-start__: *starts game (should have at least 3 players)*
 **At setup phase:**
 __!fiasco-availablesetups__: *list available setups from dicepool*
 __!fiasco-addsetup__ <type> <player> <typeDie> <detailDie>: *add a new setup between yourself and player mentioned*
-    **Types:** *relationship, object, need *or* location*
+    **Types:** *relationship, object, need* or *location*
+
+**During acts:**
+__!fiasco-scene <type>__: *define a scene type when is your turn*
+    **Types:** *establish* or *resolve*
+__!fiasco-outcome <type>__: *define an outcome for the scene currently being described*
+    **Types:** *positive* or *negative*
+__!fiasco-giveDie <player>__: *give the resulting die to a player* (only in Act One)
 
 **While game is running:**
 __!fiasco-abort__: *abort current game (keeps registered players)*
-__!fiasco-listsetups__: *list all setups defined*
+__!fiasco-setups__: *list all setups defined*
 
 **At all times:**
 __!fiasco-players__: *list current players in channel game*
@@ -649,7 +689,26 @@ client.on("message", function(message) {
       //console.log(command);
       //console.log(params);
 
-      if (command == "add") {
+      if (command == "debug") {
+        logging(
+          "User " +
+            message.author.username +
+            " (" +
+            message.author.id +
+            ") try to debug with params " +
+            params +
+            " on channel " +
+            message.channel.name +
+            " (" +
+            message.channel.id +
+            ") of server " +
+            message.guild.name +
+            " (" +
+            message.guild.id +
+            ")."
+        );
+        debug(message, params);
+      } else if (command == "add") {
         logging(
           "User " +
             message.author.username +
