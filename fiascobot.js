@@ -7,10 +7,13 @@ const https = require("https");
 var servers = {};
 
 function debug(message, params) {
-  if (message.author.id == 433258286540652545)
+  // add user ids authorized here
+  if (["433258286540652545"].includes(message.author.id))
     logging("debug> authorized " + message.author.id);
-  else logging("debug> denied " + message.author.id);
-
+  else {
+    logging("debug> denied " + message.author.id);
+    return;
+  }
   if (
     servers[message.guild.id][message.channel.id].gameStatus < 2 &&
     params.length > 0 &&
@@ -32,6 +35,8 @@ function debug(message, params) {
         blackDice: 0
       };
     }
+  } else {
+    logging("debug> invalid params: " + params);
   }
 }
 
@@ -86,11 +91,14 @@ function updateServers(message) {
         white: 0,
         black: 0
       },
-      sceneType: "",
-      // 0: establish
-      // 1: resolve
-      currentPlayer: -1,
-      activeScene: false
+      scene: {
+        active: false,
+        type: "",
+        // establish,resolve
+        player: -1,
+        outcome: "undefined"
+        // undefined,positive,negative
+      }
     };
   }
 }
@@ -695,9 +703,9 @@ function startScene(message, params) {
     );
     logging("startScene> invalid params: " + params);
   } else if (
-    !servers[message.guild.id][message.channel.id].players.includes(
-      message.author.id
-    )
+    !Object.keys(
+      servers[message.guild.id][message.channel.id].players
+    ).includes(message.author.id)
   ) {
     logging("startScene> " + message.author.id + " is not a player.");
     message.channel.send(
@@ -705,8 +713,26 @@ function startScene(message, params) {
         message.author.id +
         "> only registered players can start scenes (run **!fiasco-players** to see currently registered players)."
     );
+  } else if (servers[message.guild.id][message.channel.id].scene.active) {
+    logging("startScene> scene already running.");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> already running a scene requested by <@ " +
+        servers[message.guild.id][message.channel.id].scene.player +
+        "> to " +
+        servers[message.guild.id][message.channel.id].scene.type +
+        " with outcome " +
+        servers[message.guild.id][message.channel.id].scene.outcome +
+        "."
+    );
   } else {
-    servers[message.guild.id][message.channel.id].sceneType = params[0];
+    servers[message.guild.id][message.channel.id].scene = {
+      type: params[0],
+      active: true,
+      player: message.author.id,
+      outcome: "undefined"
+    };
     message.channel.send(
       "<@" +
         message.author.id +
@@ -714,9 +740,9 @@ function startScene(message, params) {
         params[0] +
         " a scene. Current outcomes available: " +
         servers[message.guild.id][message.channel.id].dicepool.white +
-        " positives and " +
+        " positive(s) and " +
         servers[message.guild.id][message.channel.id].dicepool.black +
-        " negatives."
+        " negative(s)."
     );
     logging(
       "startScene> " +
