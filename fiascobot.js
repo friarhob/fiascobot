@@ -85,6 +85,9 @@ function updateServers(message) {
       // 4: Second Act
       // 5: Aftermath
       players: {},
+      // player: { setups: {},
+      //    whiteDice: 0,
+      //    blackDice: 0 }
       playset: require("./playsets/mainstreet.json"),
       dicepool: {
         values: [],
@@ -303,23 +306,6 @@ function startGame(message, params) {
   }
 
   servers[message.guild.id][message.channel.id].gameStatus = 1;
-  //defining players order
-  servers[message.guild.id][message.channel.id].playerOrder = Object.keys(
-    servers[message.guild.id][message.channel.id].players
-  );
-  //shuffling
-  for (
-    var i =
-      servers[message.guild.id][message.channel.id].playerOrder.length - 1;
-    i > 0;
-    i--
-  ) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var x = servers[message.guild.id][message.channel.id].playerOrder[i];
-    servers[message.guild.id][message.channel.id].playerOrder[i] =
-      servers[message.guild.id][message.channel.id].playerOrder[j];
-    servers[message.guild.id][message.channel.id].playerOrder[j] = x;
-  }
 
   logging("start> Game started");
   message.channel.send(
@@ -664,6 +650,29 @@ function listSetups(message, params) {
   logging("listSetups> setups listed.");
 }
 
+function listDicepool(message, params) {
+  if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
+    logging("listDicepool> Game not running.");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> game is not running (run **!fiasco-start** to start a new game)."
+    );
+    return;
+  }
+  message.channel.send(
+    "<@" +
+      message.author.id +
+      "> available dice: " +
+      servers[message.guild.id][message.channel.id].dicepool.white +
+      " white and " +
+      servers[message.guild.id][message.channel.id].dicepool.black +
+      " black."
+  );
+
+  logging("listDicepool> dicepool listed.");
+}
+
 function abortGame(message, params) {
   if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
     logging("abort> Game already not running.");
@@ -754,6 +763,137 @@ function startScene(message, params) {
   }
 }
 
+function setOutcome(message, params) {
+  if (
+    ![2, 4].includes(servers[message.guild.id][message.channel.id].gameStatus)
+  ) {
+    logging("setOutcome> Called out of an act.");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> outcomes can only be set on acts (run **!fiasco-status** to see current status of a game)."
+    );
+  } else if (
+    params.length == 0 ||
+    !["negative", "positive"].includes(params[0])
+  ) {
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> usage: __!fiasco-outcome <type>__ (Types: *positive* or *negative*)."
+    );
+    logging("setOutcome> invalid params: " + params);
+  } else if (
+    !Object.keys(
+      servers[message.guild.id][message.channel.id].players
+    ).includes(message.author.id)
+  ) {
+    logging("setOutcome> " + message.author.id + " is not a player.");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> only registered players can set outcomes (run **!fiasco-players** to see currently registered players)."
+    );
+  } else if (!servers[message.guild.id][message.channel.id].scene.active) {
+    logging("setOutcome> scene not running.");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> scene not running (run **!fiasco-scene <type>** to start a new scene)."
+    );
+  } else if (
+    servers[message.guild.id][message.channel.id].scene.outcome != "undefined"
+  ) {
+    logging(
+      "setOutcome> outcome already defined as " +
+        servers[message.guild.id][message.channel.id].scene.outcome
+    );
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> outcome already defined as " +
+        servers[message.guild.id][message.channel.id].scene.outcome +
+        "."
+    );
+  } else if (
+    servers[message.guild.id][message.channel.id].scene.type == "establish" &&
+    servers[message.guild.id][message.channel.id].scene.player ==
+      message.author.id
+  ) {
+    logging("setOutcome> try to set outcome for own establishing scene.");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> other players should decide the outcome of your establishing scene."
+    );
+  } else if (
+    servers[message.guild.id][message.channel.id].scene.type == "resolve" &&
+    servers[message.guild.id][message.channel.id].scene.player !=
+      message.author.id
+  ) {
+    logging("setOutcome> try to set outcome for other player resolving scene.");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> only <@" +
+        servers[message.guild.id][message.channel.id].scene.player +
+        "> can set the outcome of the resolving scene."
+    );
+  } else if (
+    params[0] == "positive" &&
+    servers[message.guild.id][message.channel.id].dicepool.white == 0
+  ) {
+    logging(
+      "setOutcome> try to set positive outcome without white dice available."
+    );
+    message.channel.send(
+      "<@" + message.author.id + "> no more white dice available."
+    );
+  } else if (
+    params[0] == "negative" &&
+    servers[message.guild.id][message.channel.id].dicepool.black == 0
+  ) {
+    logging(
+      "setOutcome> try to set negative outcome without black dice available."
+    );
+    message.channel.send(
+      "<@" + message.author.id + "> no more black dice available."
+    );
+  } else {
+    if (params[0] == "positive") {
+      servers[message.guild.id][message.channel.id].dicepool.white -= 1;
+    } else {
+      servers[message.guild.id][message.channel.id].dicepool.black -= 1;
+    }
+    servers[message.guild.id][message.channel.id].scene.outcome = params[0];
+    logging("setOutcome> setting " + params[0] + " outcome.");
+    message.channel.send(
+      "<@" + message.author.id + "> outcome now defined as " + params[0] + "."
+    );
+    if (servers[message.guild.id][message.channel.id].gameStatus == 4) {
+      //Act two
+      if (params[0] == "positive") {
+        servers[message.guild.id][message.channel.id].players[
+          servers[message.guild.id][message.channel.id].scene.player
+        ].whiteDice += 1;
+      } else {
+        //negative
+        servers[message.guild.id][message.channel.id].players[
+          servers[message.guild.id][message.channel.id].scene.player
+        ].blackDice += 1;
+      }
+      servers[message.guild.id][message.channel.id].scene.active = false;
+      if (
+        servers[message.guild.id][message.channel.id].dicepool.white +
+          servers[message.guild.id][message.channel.id].dicepool.black ==
+        0
+      ) {
+        servers[message.guild.id][message.channel.id].gameStatus = 5;
+      }
+    }
+  }
+}
+
 function helpMessage(message, params) {
   message.channel.send(`<@${message.author.id}>
 **Before game starts:**
@@ -776,6 +916,7 @@ __!fiasco-giveDie <player>__: *give the resulting die to a player* (only in Act 
 **While game is running:**
 __!fiasco-abort__: *abort current game (keeps registered players)*
 __!fiasco-setups__: *list all setups defined*
+__!fiasco-dicepool__: *available dice in center*
 
 **At all times:**
 __!fiasco-players__: *list current players in channel game*
@@ -1003,6 +1144,23 @@ client.on("message", function(message) {
             ")."
         );
         listSetups(message, params);
+      } else if (command == "dicepool") {
+        logging(
+          "User " +
+            message.author.username +
+            " (" +
+            message.author.id +
+            ") ask the dicepool available on channel " +
+            message.channel.name +
+            " (" +
+            message.channel.id +
+            ") of server " +
+            message.guild.name +
+            " (" +
+            message.guild.id +
+            ")."
+        );
+        listDicepool(message, params);
       } else if (command == "scene") {
         logging(
           "User " +
@@ -1022,6 +1180,25 @@ client.on("message", function(message) {
             ")."
         );
         startScene(message, params);
+      } else if (command == "outcome") {
+        logging(
+          "User " +
+            message.author.username +
+            " (" +
+            message.author.id +
+            ") try to set an outcome with params " +
+            params +
+            " on channel " +
+            message.channel.name +
+            " (" +
+            message.channel.id +
+            ") of server " +
+            message.guild.name +
+            " (" +
+            message.guild.id +
+            ")."
+        );
+        setOutcome(message, params);
       } else {
         logging(
           "User " +
