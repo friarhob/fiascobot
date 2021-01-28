@@ -250,6 +250,39 @@ function listPlayers(message, params) {
   message.channel.send(res + mentionList.join(", "));
 }
 
+function listPlayerDice(message, params) {
+  if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
+    logging("listPlayerDice> Game not running.");
+    message.channel.send("<@" + message.author.id + "> game not running.");
+    return;
+  }
+  var res =
+    "<@" +
+    message.author.id +
+    `> Current dice per player:
+`;
+
+  var mentionList = [];
+
+  for (var user in servers[message.guild.id][message.channel.id].players) {
+    mentionList.push(
+      "<@" +
+        user +
+        ">: " +
+        servers[message.guild.id][message.channel.id].players[user].whiteDice +
+        " white and " +
+        servers[message.guild.id][message.channel.id].players[user].blackDice +
+        " black dice"
+    );
+  }
+
+  message.channel.send(
+    res +
+      mentionList.join(`
+`)
+  );
+}
+
 function checkStatus(message, params) {
   message.channel.send(
     "<@" +
@@ -894,6 +927,134 @@ function setOutcome(message, params) {
   }
 }
 
+function giveDie(message, params) {
+  if (servers[message.guild.id][message.channel.id].gameStatus != 2) {
+    logging("giveDie> Called out of act one.");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> dice can only be given on Act One (run **!fiasco-status** to see current status of a game)."
+    );
+  } else if (!servers[message.guild.id][message.channel.id].scene.active) {
+    logging("giveDie> scene not running.");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> scene not running (run **!fiasco-scene <type>** to start a new scene)."
+    );
+  } else if (
+    message.author.id !=
+    servers[message.guild.id][message.channel.id].scene.player
+  ) {
+    logging(
+      "giveDie> " +
+        message.author.id +
+        " is not the current player (" +
+        servers[message.guild.id][message.channel.id].scene.player +
+        ")."
+    );
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> only current player (<@" +
+        servers[message.guild.id][message.channel.id].scene.player +
+        ">) can give the die."
+    );
+  } else if (
+    servers[message.guild.id][message.channel.id].scene.outcome == "undefined"
+  ) {
+    logging("giveDie> outcome not defined.");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> outcome should be defined before giving die (run **!fiasco-outcome <type>** to define an outcome)."
+    );
+  } else if (
+    params.length == 0 ||
+    (!params[0].startsWith("<@") || !params[0].endsWith(">"))
+  ) {
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> usage: __!fiasco-givedie <player>__ (you should mention the player)."
+    );
+    logging("giveDie> no player mentioned in params. Params: " + params + ".");
+  } else {
+    var playerToReceive = params[0].slice(2, -1);
+    if (playerToReceive.startsWith("!"))
+      playerToReceive = playerToReceive.slice(1);
+    if (
+      !(
+        playerToReceive in servers[message.guild.id][message.channel.id].players
+      )
+    ) {
+      logging(
+        "giveDie> user mentioned (" + playerToReceive + ") is not a player."
+      );
+      message.channel.send(
+        "<@" +
+          message.author.id +
+          "> user <@" +
+          playerToReceive +
+          "> is not a current player (run **!fiasco-players** to list current players)."
+      );
+    } else if (
+      playerToReceive ==
+      servers[message.guild.id][message.channel.id].scene.player
+    ) {
+      logging("giveDie> trying to give a die to self.");
+      message.channel.send(
+        "<@" +
+          message.author.id +
+          "> you should choose another player to receive the die."
+      );
+    } else {
+      logging(
+        "giveDie> giving a " +
+          servers[message.guild.id][message.channel.id].scene.outcome +
+          " die to player " +
+          playerToReceive
+      );
+      message.channel.send(
+        "<@" +
+          message.author.id +
+          "> giving a " +
+          (servers[message.guild.id][message.channel.id].scene.outcome ==
+          "positive"
+            ? "white"
+            : "black") +
+          " die to <@" +
+          playerToReceive +
+          ">."
+      );
+
+      if (
+        servers[message.guild.id][message.channel.id].scene.outcome ==
+        "positive"
+      ) {
+        servers[message.guild.id][message.channel.id].players[
+          playerToReceive
+        ].whiteDice += 1;
+      } else {
+        servers[message.guild.id][message.channel.id].players[
+          playerToReceive
+        ].blackDice += 1;
+      }
+      servers[message.guild.id][message.channel.id].scene.active = false;
+      if (
+        servers[message.guild.id][message.channel.id].dicepool.white +
+          servers[message.guild.id][message.channel.id].dicepool.black ==
+        Object.keys(servers[message.guild.id][message.channel.id].players)
+          .length *
+          2
+      ) {
+        message.channel.send("Last piece of Act One. Moving to Tilt after.");
+        servers[message.guild.id][message.channel.id].gameStatus = 3;
+      }
+    }
+  }
+}
+
 function helpMessage(message, params) {
   message.channel.send(`<@${message.author.id}>
 **Before game starts:**
@@ -911,12 +1072,13 @@ __!fiasco-scene <type>__: *define a scene type when is your turn*
     **Types:** *establish* or *resolve*
 __!fiasco-outcome <type>__: *define an outcome for the scene currently being described*
     **Types:** *positive* or *negative*
-__!fiasco-giveDie <player>__: *give the resulting die to a player* (only in Act One)
+__!fiasco-givedie <player>__: *give the resulting die to a player* (only in Act One)
 
 **While game is running:**
 __!fiasco-abort__: *abort current game (keeps registered players)*
 __!fiasco-setups__: *list all setups defined*
 __!fiasco-dicepool__: *available dice in center*
+__!fiasco-playerdice__: *players current dice*
 
 **At all times:**
 __!fiasco-players__: *list current players in channel game*
@@ -1199,6 +1361,42 @@ client.on("message", function(message) {
             ")."
         );
         setOutcome(message, params);
+      } else if (command == "givedie") {
+        logging(
+          "User " +
+            message.author.username +
+            " (" +
+            message.author.id +
+            ") try to give a die with params " +
+            params +
+            " on channel " +
+            message.channel.name +
+            " (" +
+            message.channel.id +
+            ") of server " +
+            message.guild.name +
+            " (" +
+            message.guild.id +
+            ")."
+        );
+        giveDie(message, params);
+      } else if (command == "playerdice") {
+        logging(
+          "User " +
+            message.author.username +
+            " (" +
+            message.author.id +
+            ") ask to list players dice on channel " +
+            message.channel.name +
+            " (" +
+            message.channel.id +
+            ") of server " +
+            message.guild.name +
+            " (" +
+            message.guild.id +
+            ")."
+        );
+        listPlayerDice(message, params);
       } else {
         logging(
           "User " +
