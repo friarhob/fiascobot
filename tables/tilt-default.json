@@ -1,0 +1,68 @@
+{
+  "1": {
+    "type": "Mayhem",
+    "descriptions": {
+      "1": "An out of control rampage",
+      "2": "A frantic chase",
+      "3": "A dangerous animal (perhaps metaphorical) gets loose",
+      "4": "Magnificent self-destruction",
+      "5": "Cold-blooded score-settling",
+      "6": "Misdirected passion"
+    }
+  },
+  "2": {
+    "type": "Tragedy",
+    "descriptions": {
+      "1": "Death, out of the blue",
+      "2": "Somebody’s life is changed forever, in a bad way",
+      "3": "Pain, followed by confusion",
+      "4": "Death, right on time",
+      "5": "Confusion, followed by pain",
+      "6": "Death, after an unpleasant struggle"
+    }
+  },
+  "3": {
+    "type": "Innocence",
+    "descriptions": {
+      "1": "Somebody is not so innocent after all",
+      "2": "A neighbor wanders into the situation",
+      "3": "The wrong guy gets busted",
+      "4": "Collateral damage",
+      "5": "Love rears its ugly head",
+      "6": "A well-meaning stranger intervenes"
+    }
+  },
+  "4": {
+    "type": "Guilt",
+    "descriptions": {
+      "1": "A visit from the (perhaps unofficial) authorities",
+      "2": "Betrayed by friends",
+      "3": "Somebody develops a conscience",
+      "4": "Greed leads to killing",
+      "5": "Someone panics",
+      "6": "A showdown"
+    }
+  },
+  "5": {
+    "type": "Paranoia",
+    "descriptions": {
+      "1": "A stranger arrives to settle a score",
+      "2": "What seems like dumb luck isn’t - things are afoot",
+      "3": "Two people cross paths and everything changes",
+      "4": "A sudden reversal (of status, of fortune, of sympathy)",
+      "5": "The thing you stole has been stolen",
+      "6": "Somebody is watching, waiting for their moment"
+    }
+  },
+  "6": {
+    "type": "Failure",
+    "descriptions": {
+      "1": "A stupid plan, executed to perfection",
+      "2": "Something precious is on fire",
+      "3": "A tiny mistake leads to ruin",
+      "4": "A good plan comes unraveled",
+      "5": "You thought it was taken care of but it wasn’t",
+      "6": "Fear leads to a fateful decision"
+    }
+  }
+}
