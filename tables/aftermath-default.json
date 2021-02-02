@@ -1,0 +1,98 @@
+{
+  "zero":
+    "**The worst thing in the universe**. This probably doesn’t include death, since death would be way better than whatever this is. Be creative and don’t settle for the first “worst” thing that comes to mind – there’s something darker, more awful, more wretched in there somewhere.",
+  "white": [
+    {
+      "limit": 1,
+      "description":
+        "**Dreadful**. You are certainly dead, probably from a self-inflicted wound. People you care about are also probably dead, maybe through your own stupid, ugly failure. To say that you fucked up is an insult to fucked-upedness. You have redefined the term."
+    },
+    {
+      "limit": 2,
+      "description":
+        "**Merciless**. You might not be dead on the outside but you sure as hell are dead on the inside. The emotional or mental wounds you have suffered will never heal. The future is a brick wall."
+    },
+    {
+      "limit": 3,
+      "description":
+        "**Grim**. The stress and trauma from your little adventure are going to haunt you forever - bits of your soul are destroyed and you are missing a piece or two. In a few years children are going to cry when you get too close. All your plans have ended in complete ruin."
+    },
+    {
+      "limit": 4,
+      "description":
+        "**Bitter**. You know what it’s like to be utterly crushed, casually brought low, forced to eat your own words and stand mute and powerless before your enemies. They gloat, and you are helpless."
+    },
+    {
+      "limit": 5,
+      "description":
+        "**Miserable**. You are humiliated in a big, public way, and whatever reputation you once had is now in dirty pieces all around you. You’ll never think of these days without a shudder of horror at your own aggressive stupidity."
+    },
+    {
+      "limit": 7,
+      "description":
+        "**Weak**. Hey, you’re busted, beat, and broke down, but at least you’ve learned a lesson about human greed and frailty, right? It’ll serve you well in prison, which is where you are probably headed."
+    },
+    {
+      "limit": 9,
+      "description":
+        "**Nothing to crow about**. Not better, but not way worse, either. Maybe the car is wrecked, or your wife is leaving you, or there’s a court date. But compared to some of the other people you know..."
+    },
+    {
+      "limit": 12,
+      "description":
+        "**Not too shabby**. You’ve made it out with dignity intact, through some fluke. There might even be a little profit, or self respect, or something. Time to throw a little party for all your friends."
+    },
+    {
+      "limit": 100,
+      "description":
+        "**Fan-fucking-tastic**. It’s fat times ahead, safe and secure. That thing that would make your life better? Oh, you got it, absolutely, and then some. And then some more. Enjoy it!"
+    }
+  ],
+  "black": [
+    {
+      "limit": 1,
+      "description":
+        "**Horrible**. You are probably dead. Other people, probably innocent people, are as well. There is no justice, there is no mercy, everything is utterly, painfully screwed and it is all – all of it – your fault."
+    },
+    {
+      "limit": 2,
+      "description":
+        "**Brutal**. Wounds that will never heal, for starters; stuff sawed off, blown off, or burned off on your way to grand, ignominious failure. Kiss whatever you care about goodbye. You may die, but you may not."
+    },
+    {
+      "limit": 3,
+      "description":
+        "**Harsh**. Shit-in-a-bag harsh, a-lifetime-of-medication harsh. A big black cloud of hurt is going to rain all over you. The things you need to happen are not going to, simple as that."
+    },
+    {
+      "limit": 4,
+      "description":
+        "**Savage**. Savage as in “something is broken or mashed.” Maybe you’ve got a permanent limp and a bad reputation. Plus, you totally fail."
+    },
+    {
+      "limit": 5,
+      "description":
+        "**Rough**. You are getting whipped like a rented mule, for starters, and you will remember this episode for all your diminished days. The lesson you learn will be profound, lingering, and painful."
+    },
+    {
+      "limit": 7,
+      "description":
+        "**Pathetic**. You’ll suffer, oh dear God will you suffer, and everyone will know of your malfeasance, your stupidity, your lack of common sense and decency. You’re probably going to be locked up, too."
+    },
+    {
+      "limit": 9,
+      "description":
+        "**Nothing to write home about**. Back to where you started. Maybe sore and broke, just like yesterday and tomorrow. You prob- ably learned something though, like how to do it right next time. Next time..."
+    },
+    {
+      "limit": 12,
+      "description":
+        "**Pretty good**. All things considered, you’re coming out of this smelling like a rose. You’re a little better off - maybe you got the girl, or maybe you just didn’t get caught."
+    },
+    {
+      "limit": 100,
+      "description":
+        "**Awesome**. Insanely great. You will emerge not only unscathed, but if there’s a girl involved, she’s dropping her drawers. You might even get rich off this caper, who knows? Time for a new ride."
+    }
+  ]
+}
