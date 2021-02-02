@@ -89,6 +89,7 @@ function updateServers(message) {
       //    whiteDice: 0,
       //    blackDice: 0 }
       playset: require("./playsets/mainstreet.json"),
+      tiltTable: require("./tables/tilt-default.json"),
       dicepool: {
         values: [],
         white: 0,
@@ -923,6 +924,11 @@ function setOutcome(message, params) {
       ) {
         servers[message.guild.id][message.channel.id].gameStatus = 5;
       }
+      message.channel.send(
+        "<@" +
+          message.author.id +
+          "> Last piece of Act Two (run __!fiasco-aftermath__ to run aftermath after finishing the scene)."
+      );
     }
   }
 }
@@ -1048,11 +1054,136 @@ function giveDie(message, params) {
           .length *
           2
       ) {
-        message.channel.send("Last piece of Act One. Moving to Tilt after.");
+        message.channel.send(
+          "Last piece of Act One (run __!fiasco-tilt__ to run tilt after finishing the scene)."
+        );
         servers[message.guild.id][message.channel.id].gameStatus = 3;
       }
     }
   }
+}
+
+function runTilt(message, params) {
+  if (servers[message.guild.id][message.channel.id].gameStatus != 3) {
+    logging("runTilt> Called out of tilt.");
+    message.channel.send(
+      "<@" +
+        message.author.id +
+        "> tilt can only be called at the end of Act One/tilt status (run **!fiasco-status** to see current status of a game)."
+    );
+    return;
+  }
+  logging("runTilt> defining players to define tilt.");
+  maxWhite = ["", -50, -1];
+  maxBlack = ["", -50, -1];
+  for (var player in servers[message.guild.id][message.channel.id].players) {
+    var white = rollDice(
+      servers[message.guild.id][message.channel.id].players[player].whiteDice
+    ).reduce((a, b) => a + b, 0);
+    var black = rollDice(
+      servers[message.guild.id][message.channel.id].players[player].blackDice
+    ).reduce((a, b) => a + b, 0);
+    message.channel.send(
+      "<@" + player + "> white: " + white + " / black: " + black + "."
+    );
+    var total = white + black;
+    if (
+      white - black > maxWhite[1] ||
+      (white - black == maxWhite[1] && total > maxWhite[2])
+    ) {
+      maxWhite = [player, white - black, total];
+    } else if (white - black == maxWhite[1] && total == maxWhite[2]) {
+      logging(
+        "runTilt> resolving white draw on " + maxWhite[0] + " and " + player
+      );
+      var max = 0;
+      var cur = 0;
+      do {
+        max = rollDice(
+          servers[message.guild.id][message.channel.id].players[maxWhite[0]]
+            .whiteDice +
+            servers[message.guild.id][message.channel.id].players[maxWhite[0]]
+              .blackDice +
+            1
+        ).reduce((a, b) => a + b, 0);
+        cur = rollDice(
+          servers[message.guild.id][message.channel.id].players[player]
+            .whiteDice +
+            servers[message.guild.id][message.channel.id].players[player]
+              .blackDice +
+            1
+        ).reduce((a, b) => a + b, 0);
+        logging("runTilt> " + max + " / " + cur);
+        if (cur > max) maxWhite = [player, white - black, total];
+      } while (max == cur);
+    }
+    if (
+      black - white > maxBlack[1] ||
+      (black - white == maxBlack[1] && total > maxBlack[2])
+    ) {
+      maxBlack = [player, black - white, total];
+    } else if (black - white == maxBlack[1] && total == maxBlack[2]) {
+      logging(
+        "runTilt> resolving black draw on " + maxBlack[0] + " and " + player
+      );
+      var max = 0;
+      var cur = 0;
+      do {
+        max = rollDice(
+          servers[message.guild.id][message.channel.id].players[maxBlack[0]]
+            .whiteDice +
+            servers[message.guild.id][message.channel.id].players[maxBlack[0]]
+              .blackDice
+        ).reduce((a, b) => a + b, 0);
+        cur = rollDice(
+          servers[message.guild.id][message.channel.id].players[player]
+            .whiteDice +
+            servers[message.guild.id][message.channel.id].players[player]
+              .blackDice
+        ).reduce((a, b) => a + b, 0);
+        logging("runTilt> " + max + " / " + cur);
+        if (cur > max) maxBlack = [player, black - white, total];
+      } while (max == cur);
+    }
+  }
+  message.channel.send(
+    "Players to run tilt: <@" +
+      maxWhite[0] +
+      "> (white) and <@" +
+      maxBlack[0] +
+      "> (black)."
+  );
+  var dicepool = rollDice(
+    Object.keys(servers[message.guild.id][message.channel.id].players).length *
+      2
+  );
+  var tiltList =
+    "**Available tilts** (dicepool: *" + dicepool.join(", ") + "*)";
+  for (var i = 1; i <= 6; i++) {
+    if (dicepool.filter(x => x === i).length >= 1) {
+      tiltList += `
+__(${i}) ${
+        servers[message.guild.id][message.channel.id].tiltTable[i.toString()][
+          "type"
+        ]
+      }__`;
+      for (var j = 1; j <= 6; j++) {
+        if (
+          (i == j && dicepool.filter(x => x === j).length >= 2) ||
+          (i != j && dicepool.filter(x => x === j).length >= 1)
+        ) {
+          tiltList += `
+(${i},${j}) ${
+            servers[message.guild.id][message.channel.id].tiltTable[
+              i.toString()
+            ]["descriptions"][j.toString()]
+          }`;
+        }
+      }
+    }
+  }
+  message.channel.send(tiltList);
+  servers[message.guild.id][message.channel.id].gameStatus = 4;
 }
 
 function helpMessage(message, params) {
@@ -1073,6 +1204,10 @@ __!fiasco-scene <type>__: *define a scene type when is your turn*
 __!fiasco-outcome <type>__: *define an outcome for the scene currently being described*
     **Types:** *positive* or *negative*
 __!fiasco-givedie <player>__: *give the resulting die to a player* (only in Act One)
+
+**After acts:**
+__!fiasco-tilt__: *run tilt after Act One (TBI)*
+__!fiasco-aftermath__: *run aftermath after Act Two (TBI)*
 
 **While game is running:**
 __!fiasco-abort__: *abort current game (keeps registered players)*
@@ -1397,6 +1532,23 @@ client.on("message", function(message) {
             ")."
         );
         listPlayerDice(message, params);
+      } else if (command == "tilt") {
+        logging(
+          "User " +
+            message.author.username +
+            " (" +
+            message.author.id +
+            ") try to call Tilt on channel " +
+            message.channel.name +
+            " (" +
+            message.channel.id +
+            ") of server " +
+            message.guild.name +
+            " (" +
+            message.guild.id +
+            ")."
+        );
+        runTilt(message, params);
       } else {
         logging(
           "User " +
