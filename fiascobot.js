@@ -1074,8 +1074,8 @@ function runTilt(message, params) {
     return;
   }
   logging("runTilt> defining players to define tilt.");
-  maxWhite = ["", -50, -1];
-  maxBlack = ["", -50, -1];
+  maxWhite = ["", -100, -1];
+  maxBlack = ["", -100, -1];
   for (var player in servers[message.guild.id][message.channel.id].players) {
     var white = rollDice(
       servers[message.guild.id][message.channel.id].players[player].whiteDice
