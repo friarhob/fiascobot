@@ -7,1187 +7,1246 @@ const https = require("https");
 var servers = {};
 
 function debug(message, params) {
-  // add user ids authorized here
-  if (["433258286540652545"].includes(message.author.id))
-    logging("debug> authorized " + message.author.id);
-  else {
-    logging("debug> denied " + message.author.id);
-    return;
-  }
-  if (
-    servers[message.guild.id][message.channel.id].gameStatus < 2 &&
-    params.length > 0 &&
-    params[0] == "skipToActOne"
-  ) {
-    logging("debug> skipping to Act One");
-    servers[message.guild.id][message.channel.id].gameStatus = 2;
-    if (
-      !(
-        message.author.id in
-        servers[message.guild.id][message.channel.id].players
-      )
-    ) {
-      servers[message.guild.id][message.channel.id].players[
-        message.author.id
-      ] = {
-        setups: {},
-        whiteDice: 0,
-        blackDice: 0
-      };
+    // add user ids authorized here
+    if (["433258286540652545"].includes(message.author.id))
+        logging("debug> authorized " + message.author.id);
+    else {
+        logging("debug> denied " + message.author.id);
+        return;
     }
-  } else {
-    logging("debug> invalid params: " + params);
-  }
+    if (
+        servers[message.guild.id][message.channel.id].gameStatus < 2 &&
+        params.length > 0 &&
+        params[0] == "skipToActOne"
+    ) {
+        logging("debug> skipping to Act One");
+        servers[message.guild.id][message.channel.id].gameStatus = 2;
+        if (
+            !(
+                message.author.id in
+                servers[message.guild.id][message.channel.id].players
+            )
+        ) {
+            servers[message.guild.id][message.channel.id].players[message.author.id] =
+            {
+                setups: {},
+                whiteDice: 0,
+                blackDice: 0,
+            };
+        }
+    } else {
+        logging("debug> invalid params: " + params);
+    }
 }
 
 function logging(message, type = "LOG") {
-  if (type == "LOG") {
-    console.log(new Date(Date.now()).toISOString() + ": " + message);
-  } else if (type == "ERROR") {
-    console.error(new Date(Date.now()).toISOString() + ": " + message);
-  }
+    if (type == "LOG") {
+        console.log(new Date(Date.now()).toISOString() + ": " + message);
+    } else if (type == "ERROR") {
+        console.error(new Date(Date.now()).toISOString() + ": " + message);
+    }
 }
 
 function updateServers(message) {
-  let server = message.guild.id;
-  let serverName = message.guild.name;
-  let channel = message.channel.id;
-  let channelName = message.channel.name;
+    let server = message.guild.id;
+    let serverName = message.guild.name;
+    let channel = message.channel.id;
+    let channelName = message.channel.name;
 
-  if (!(server in servers)) {
-    logging(
-      "Interacting with server " +
-        serverName +
-        " (" +
-        server +
-        ") for the first time"
-    );
-    servers[server] = {};
-  }
-  if (!(channel in servers[server])) {
-    logging(
-      "Interacting with channel " +
-        channelName +
-        " (" +
-        channel +
-        ") of server " +
-        serverName +
-        " (" +
-        server +
-        ") for the first time"
-    );
-    servers[server][channel] = {
-      gameStatus: 0,
-      // 0: Not Started
-      // 1: Setup
-      // 2: First Act
-      // 3: Tilt
-      // 4: Second Act
-      // 5: Aftermath
-      players: {},
-      // player: { setups: {},
-      //    whiteDice: 0,
-      //    blackDice: 0 }
-      playset: require("./playsets/mainstreet.json"),
-      tiltTable: require("./tables/tilt-default.json"),
-      dicepool: {
-        values: [],
-        white: 0,
-        black: 0
-      },
-      scene: {
-        active: false,
-        type: "",
-        // establish,resolve
-        player: -1,
-        outcome: "undefined"
-        // undefined,positive,negative
-      }
-    };
-  }
+    if (!(server in servers)) {
+        logging(
+            "Interacting with server " +
+            serverName +
+            " (" +
+            server +
+            ") for the first time"
+        );
+        servers[server] = {};
+    }
+    if (!(channel in servers[server])) {
+        logging(
+            "Interacting with channel " +
+            channelName +
+            " (" +
+            channel +
+            ") of server " +
+            serverName +
+            " (" +
+            server +
+            ") for the first time"
+        );
+        servers[server][channel] = {
+            gameStatus: 0,
+            // 0: Not Started
+            // 1: Setup
+            // 2: First Act
+            // 3: Tilt
+            // 4: Second Act
+            // 5: Aftermath
+            players: {},
+            // player: { setups: {},
+            //    whiteDice: 0,
+            //    blackDice: 0 }
+            playset: require("./playsets/mainstreet.json"),
+            tiltTable: require("./tables/tilt-default.json"),
+            aftermathTable: require("./tables/aftermath-default.json"),
+            dicepool: {
+                values: [],
+                white: 0,
+                black: 0,
+            },
+            scene: {
+                active: false,
+                type: "",
+                // establish,resolve
+                player: -1,
+                outcome: "undefined",
+                // undefined,positive,negative
+            },
+        };
+    }
 }
 
 function addPlayers(message, params) {
-  playersAdded = [];
+    playersAdded = [];
 
-  if (servers[message.guild.id][message.channel.id].gameStatus > 0) {
-    logging("add> Can't add players with game running.");
-    message.channel.send(
-      "<@" + message.author.id + "> can't add players with game running."
-    );
-    return;
-  }
-
-  for (const param of params) {
-    if (param.startsWith("<@") && param.endsWith(">")) {
-      var id = param.slice(2, -1);
-      if (id.startsWith("!")) id = id.slice(1);
-
-      if (!(id in servers[message.guild.id][message.channel.id].players)) {
-        playersAdded.push(id);
-      } else {
+    if (servers[message.guild.id][message.channel.id].gameStatus > 0) {
+        logging("add> Can't add players with game running.");
         message.channel.send(
-          "<@" +
+            "<@" + message.author.id + "> can't add players with game running."
+        );
+        return;
+    }
+
+    for (const param of params) {
+        if (param.startsWith("<@") && param.endsWith(">")) {
+            var id = param.slice(2, -1);
+            if (id.startsWith("!")) id = id.slice(1);
+
+            if (!(id in servers[message.guild.id][message.channel.id].players)) {
+                playersAdded.push(id);
+            } else {
+                message.channel.send(
+                    "<@" +
+                    message.author.id +
+                    "> user <@" +
+                    id +
+                    "> alerady registered as a player."
+                );
+            }
+        } else {
+            message.channel.send(
+                "<@" +
+                message.author.id +
+                "> I don't understand who or what is \"" +
+                param +
+                '".'
+            );
+        }
+    }
+
+    if (
+        Object.keys(servers[message.guild.id][message.channel.id].players).length +
+        playersAdded.length >
+        5
+    ) {
+        message.channel.send(
+            "<@" +
             message.author.id +
-            "> user <@" +
-            id +
-            "> alerady registered as a player."
+            "> no more than 5 players allowed in a Fiasco game (consider splitting in two or more groups, in separate channels)."
         );
-      }
+        logging("add> It would end with more than 5 players on a game.");
     } else {
-      message.channel.send(
-        "<@" +
-          message.author.id +
-          "> I don't understand who or what is \"" +
-          param +
-          '".'
-      );
+        if (playersAdded.length == 0) {
+            logging("add> No players added.");
+            message.channel.send(
+                "<@" +
+                message.author.id +
+                "> no players added (should mention every user you want to add to a Fiasco game)."
+            );
+        } else {
+            for (const player of playersAdded) {
+                servers[message.guild.id][message.channel.id].players[player] = {
+                    setups: {},
+                    whiteDice: 0,
+                    blackDice: 0,
+                };
+                message.channel.send(
+                    "<@" + message.author.id + "> added <@" + player + "> as a player."
+                );
+            }
+        }
+        logging("add> Players added: " + playersAdded);
     }
-  }
-
-  if (
-    Object.keys(servers[message.guild.id][message.channel.id].players).length +
-      playersAdded.length >
-    5
-  ) {
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> no more than 5 players allowed in a Fiasco game (consider splitting in two or more groups, in separate channels)."
-    );
-    logging("add> It would end with more than 5 players on a game.");
-  } else {
-    if (playersAdded.length == 0) {
-      logging("add> No players added.");
-      message.channel.send(
-        "<@" +
-          message.author.id +
-          "> no players added (should mention every user you want to add to a Fiasco game)."
-      );
-    } else {
-      for (const player of playersAdded) {
-        servers[message.guild.id][message.channel.id].players[player] = {
-          setups: {},
-          whiteDice: 0,
-          blackDice: 0
-        };
-        message.channel.send(
-          "<@" + message.author.id + "> added <@" + player + "> as a player."
-        );
-      }
-    }
-    logging("add> Players added: " + playersAdded);
-  }
 }
 
 function removePlayers(message, params) {
-  playersRemoved = [];
+    playersRemoved = [];
 
-  if (servers[message.guild.id][message.channel.id].gameStatus > 0) {
-    logging("add> Can't remove players with game running.");
-    message.channel.send(
-      "<@" + message.author.id + "> can't remove players with game running."
-    );
-    return;
-  }
-
-  for (const param of params) {
-    if (param.startsWith("<@") && param.endsWith(">")) {
-      var id = param.slice(2, -1);
-      if (id.startsWith("!")) id = id.slice(1);
-
-      if (id in servers[message.guild.id][message.channel.id].players) {
-        playersRemoved.push(id);
-      } else {
+    if (servers[message.guild.id][message.channel.id].gameStatus > 0) {
+        logging("add> Can't remove players with game running.");
         message.channel.send(
-          "<@" +
-            message.author.id +
-            "> user <@" +
-            id +
-            "> not registered as a player."
+            "<@" + message.author.id + "> can't remove players with game running."
         );
-      }
+        return;
+    }
+
+    for (const param of params) {
+        if (param.startsWith("<@") && param.endsWith(">")) {
+            var id = param.slice(2, -1);
+            if (id.startsWith("!")) id = id.slice(1);
+
+            if (id in servers[message.guild.id][message.channel.id].players) {
+                playersRemoved.push(id);
+            } else {
+                message.channel.send(
+                    "<@" +
+                    message.author.id +
+                    "> user <@" +
+                    id +
+                    "> not registered as a player."
+                );
+            }
+        } else {
+            message.channel.send(
+                "<@" +
+                message.author.id +
+                "> I don't understand who or what is \"" +
+                param +
+                '".'
+            );
+        }
+    }
+    if (playersRemoved.length == 0) {
+        logging("remove> No players removed.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> no players removed (should mention every user you want to remove from a Fiasco game)."
+        );
     } else {
-      message.channel.send(
-        "<@" +
-          message.author.id +
-          "> I don't understand who or what is \"" +
-          param +
-          '".'
-      );
+        for (const player of playersRemoved) {
+            delete servers[message.guild.id][message.channel.id].players[player];
+            message.channel.send(
+                "<@" +
+                message.author.id +
+                "> removed <@" +
+                player +
+                "> from the players' list."
+            );
+        }
     }
-  }
-  if (playersRemoved.length == 0) {
-    logging("remove> No players removed.");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> no players removed (should mention every user you want to remove from a Fiasco game)."
-    );
-  } else {
-    for (const player of playersRemoved) {
-      delete servers[message.guild.id][message.channel.id].players[player];
-      message.channel.send(
-        "<@" +
-          message.author.id +
-          "> removed <@" +
-          player +
-          "> from the players' list."
-      );
-    }
-  }
-  logging("remove> Players removed: " + playersRemoved);
+    logging("remove> Players removed: " + playersRemoved);
 }
 
 function listPlayers(message, params) {
-  var res = "<@" + message.author.id + "> Current players: ";
+    var res = "<@" + message.author.id + "> Current players: ";
 
-  var mentionList = [];
+    var mentionList = [];
 
-  for (var user in servers[message.guild.id][message.channel.id].players) {
-    mentionList.push("<@" + user + ">");
-  }
+    for (var user in servers[message.guild.id][message.channel.id].players) {
+        mentionList.push("<@" + user + ">");
+    }
 
-  message.channel.send(res + mentionList.join(", "));
+    message.channel.send(res + mentionList.join(", "));
 }
 
 function listPlayerDice(message, params) {
-  if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
-    logging("listPlayerDice> Game not running.");
-    message.channel.send("<@" + message.author.id + "> game not running.");
-    return;
-  }
-  var res =
-    "<@" +
-    message.author.id +
-    `> Current dice per player:
+    if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
+        logging("listPlayerDice> Game not running.");
+        message.channel.send("<@" + message.author.id + "> game not running.");
+        return;
+    }
+    var res =
+        "<@" +
+        message.author.id +
+        `> Current dice per player:
 `;
 
-  var mentionList = [];
+    var mentionList = [];
 
-  for (var user in servers[message.guild.id][message.channel.id].players) {
-    mentionList.push(
-      "<@" +
-        user +
-        ">: " +
-        servers[message.guild.id][message.channel.id].players[user].whiteDice +
-        " white and " +
-        servers[message.guild.id][message.channel.id].players[user].blackDice +
-        " black dice"
-    );
-  }
+    for (var user in servers[message.guild.id][message.channel.id].players) {
+        mentionList.push(
+            "<@" +
+            user +
+            ">: " +
+            servers[message.guild.id][message.channel.id].players[user].whiteDice +
+            " white and " +
+            servers[message.guild.id][message.channel.id].players[user].blackDice +
+            " black dice"
+        );
+    }
 
-  message.channel.send(
-    res +
-      mentionList.join(`
+    message.channel.send(
+        res +
+        mentionList.join(`
 `)
-  );
+    );
 }
 
 function checkStatus(message, params) {
-  message.channel.send(
-    "<@" +
-      message.author.id +
-      "> Fiasco game in this channel is currently " +
-      [
-        "not running",
-        "at setup phase",
-        "in act one",
-        "at tilt phase",
-        "in act two",
-        "at aftermath"
-      ][servers[message.guild.id][message.channel.id].gameStatus] +
-      "."
-  );
+    message.channel.send(
+        "<@" +
+        message.author.id +
+        "> Fiasco game in this channel is currently " +
+        [
+            "not running",
+            "at setup phase",
+            "in act one",
+            "at tilt phase",
+            "in act two",
+            "at aftermath",
+        ][servers[message.guild.id][message.channel.id].gameStatus] +
+        "."
+    );
 }
 
 function rollDice(n) {
-  var res = [];
-  while (n > 0) {
-    res.push(Math.floor(Math.random() * 6 + 1));
-    n--;
-  }
-  return res;
+    var res = [];
+    while (n > 0) {
+        res.push(Math.floor(Math.random() * 6 + 1));
+        n--;
+    }
+    return res;
 }
 
 function startGame(message, params) {
-  if (servers[message.guild.id][message.channel.id].gameStatus > 0) {
-    logging("start> Game already running.");
+    if (servers[message.guild.id][message.channel.id].gameStatus > 0) {
+        logging("start> Game already running.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> game already running (run **!fiasco-status** to verify the status of a game, and **!fiasco-abort** if you want to abort the game)."
+        );
+        return;
+    }
+
+    if (
+        Object.keys(servers[message.guild.id][message.channel.id].players).length <
+        3
+    ) {
+        logging(
+            "start> Not enough players (" +
+            Object.keys(servers[message.guild.id][message.channel.id].players)
+                .length +
+            " player(s) registered)"
+        );
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> can't play a Fiasco game with less than 3 players (run **!fiasco-players** to verify registered players)."
+        );
+        return;
+    }
+
+    servers[message.guild.id][message.channel.id].gameStatus = 1;
+
+    logging("start> Game started");
     message.channel.send(
-      "<@" +
-        message.author.id +
-        "> game already running (run **!fiasco-status** to verify the status of a game, and **!fiasco-abort** if you want to abort the game)."
+        "<@" + message.author.id + "> game started. Setup phase."
     );
-    return;
-  }
 
-  if (
-    Object.keys(servers[message.guild.id][message.channel.id].players).length <
-    3
-  ) {
-    logging(
-      "start> Not enough players (" +
-        Object.keys(servers[message.guild.id][message.channel.id].players)
-          .length +
-        " player(s) registered)"
+    //Setup phase
+    //Rolling dice
+    servers[message.guild.id][message.channel.id].dicepool.values = rollDice(
+        Object.keys(servers[message.guild.id][message.channel.id].players).length *
+        4
     );
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> can't play a Fiasco game with less than 3 players (run **!fiasco-players** to verify registered players)."
-    );
-    return;
-  }
 
-  servers[message.guild.id][message.channel.id].gameStatus = 1;
+    //adding dice colours
+    servers[message.guild.id][message.channel.id].dicepool.white = servers[
+        message.guild.id
+    ][message.channel.id].dicepool.black =
+        Object.keys(servers[message.guild.id][message.channel.id].players).length *
+        2;
 
-  logging("start> Game started");
-  message.channel.send(
-    "<@" + message.author.id + "> game started. Setup phase."
-  );
-
-  //Setup phase
-  //Rolling dice
-  servers[message.guild.id][message.channel.id].dicepool.values = rollDice(
-    Object.keys(servers[message.guild.id][message.channel.id].players).length *
-      4
-  );
-
-  //adding dice colours
-  servers[message.guild.id][message.channel.id].dicepool.white = servers[
-    message.guild.id
-  ][message.channel.id].dicepool.black =
-    Object.keys(servers[message.guild.id][message.channel.id].players).length *
-    2;
-
-  //list initial available setups
-  availableSetups(message, params);
+    //list initial available setups
+    availableSetups(message, params);
 }
 
 function availableSetupsPerType(message, type) {
-  var res = "";
-  for (var i = 1; i <= 6; i++) {
-    if (
-      servers[message.guild.id][message.channel.id].dicepool.values.filter(
-        x => x === i
-      ).length >= 1
-    ) {
-      res += `
-__(${i}) ${
-        servers[message.guild.id][message.channel.id].playset[type][
-          i.toString()
-        ]["type"]
-      }__`;
-      for (var j = 1; j <= 6; j++) {
+    var res = "";
+    for (var i = 1; i <= 6; i++) {
         if (
-          (i == j &&
-            servers[message.guild.id][
-              message.channel.id
-            ].dicepool.values.filter(x => x === j).length >= 2) ||
-          (i != j &&
-            servers[message.guild.id][
-              message.channel.id
-            ].dicepool.values.filter(x => x === j).length >= 1)
+            servers[message.guild.id][message.channel.id].dicepool.values.filter(
+                (x) => x === i
+            ).length >= 1
         ) {
-          res += `
-(${i},${j}) ${
-            servers[message.guild.id][message.channel.id].playset[type][
-              i.toString()
-            ]["descriptions"][j.toString()]
-          }`;
+            res += `
+__(${i}) ${servers[message.guild.id][message.channel.id].playset[type][
+                i.toString()
+                ]["type"]
+                }__`;
+            for (var j = 1; j <= 6; j++) {
+                if (
+                    (i == j &&
+                        servers[message.guild.id][
+                            message.channel.id
+                        ].dicepool.values.filter((x) => x === j).length >= 2) ||
+                    (i != j &&
+                        servers[message.guild.id][
+                            message.channel.id
+                        ].dicepool.values.filter((x) => x === j).length >= 1)
+                ) {
+                    res += `
+(${i},${j}) ${servers[message.guild.id][message.channel.id].playset[type][
+                        i.toString()
+                        ]["descriptions"][j.toString()]
+                        }`;
+                }
+            }
         }
-      }
     }
-  }
-  return res;
+    return res;
 }
 
 function availableSetups(message, params) {
-  if (servers[message.guild.id][message.channel.id].gameStatus != 1) {
-    logging("availableSetups> called out of Setup Phase");
+    if (servers[message.guild.id][message.channel.id].gameStatus != 1) {
+        logging("availableSetups> called out of Setup Phase");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> available setups makes sense just in Setup Phase (run **__!fiasco-status__** to check status of the game)."
+        );
+        return;
+    }
+    if (
+        servers[message.guild.id][message.channel.id].dicepool.values.length == 0
+    ) {
+        logging(
+            "availableSetups> called during Setup Phase without dice in pool",
+            (type = "ERROR")
+        );
+        return;
+    }
+
     message.channel.send(
-      "<@" +
-        message.author.id +
-        "> available setups makes sense just in Setup Phase (run **__!fiasco-status__** to check status of the game)."
-    );
-    return;
-  }
-  if (
-    servers[message.guild.id][message.channel.id].dicepool.values.length == 0
-  ) {
-    logging(
-      "availableSetups> called during Setup Phase without dice in pool",
-      (type = "ERROR")
-    );
-    return;
-  }
-
-  message.channel.send(
-    "Dice Pool available: " +
-      servers[message.guild.id][message.channel.id].dicepool.values
-  );
-
-  message.channel.send(
-    "**Available Relationships**" +
-      availableSetupsPerType(message, "relationships")
-  );
-  message.channel.send(
-    "**Available Needs**" + availableSetupsPerType(message, "needs")
-  );
-  message.channel.send(
-    "**Available Locations**" + availableSetupsPerType(message, "locations")
-  );
-  message.channel.send(
-    "**Available Objects**" + availableSetupsPerType(message, "objects")
-  );
-}
-
-function addSetup(message, params) {
-  if (servers[message.guild.id][message.channel.id].gameStatus != 1) {
-    logging("addSetup> called out of Setup Phase");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> add a setup makes sense just in Setup Phase (run **__!fiasco-status__** to check status of the game)."
-    );
-    return;
-  }
-
-  if (params.length < 4) {
-    logging("addSetup> less than 4 parameters");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> **!fiasco-addSetup** usage: *!fiasco-addSetup <type> <player> <typeDie> <detailDie>*."
-    );
-    return;
-  }
-
-  if (!["relationship", "object", "need", "location"].includes(params[0])) {
-    logging("addSetup> type invalid: " + params[0]);
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> " +
-        params[0] +
-        " is not a valid setup. Setup types: *relationship, object, need* or *location*"
-    );
-    return;
-  }
-
-  if (!(params[1].startsWith("<@") && params[1].endsWith(">"))) {
-    logging("addSetup> player not mentioned: " + params[1]);
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> you should mention the player you'll have a relationship with."
-    );
-    return;
-  }
-
-  var otherPlayer = params[1].slice(2, -1);
-  if (otherPlayer.startsWith("!")) otherPlayer = otherPlayer.slice(1);
-
-  if (otherPlayer === message.author.id) {
-    logging("addSetup> try to create a relationship with itself");
-    message.channel.send(
-      "<@" + message.author.id + "> no one can add a relationship with itself."
-    );
-    return;
-  }
-
-  if (!(otherPlayer in servers[message.guild.id][message.channel.id].players)) {
-    logging(
-      "addSetup> try to create a relationship with a non-player: " +
-        params[1] +
-        ". Players: " +
-        Object.keys(servers[message.guild.id][message.channel.id].players)
-    );
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> " +
-        params[1] +
-        " isn't listed as a player. Use **!fiasco-players** to check who's playing this game."
-    );
-
-    return;
-  }
-
-  if (
-    servers[message.guild.id][message.channel.id].dicepool.values.filter(
-      x => x == params[2]
-    ).length < 1 ||
-    servers[message.guild.id][message.channel.id].dicepool.values.filter(
-      x => x == params[3]
-    ).length < (params[2] != params[3] ? 1 : 2)
-  ) {
-    logging(
-      "addSetup> " +
-        params[2] +
-        " and " +
-        params[3] +
-        " should be valid dice. Available dice: " +
+        "Dice Pool available: " +
         servers[message.guild.id][message.channel.id].dicepool.values
     );
 
     message.channel.send(
-      "<@" +
-        message.author.id +
-        "> you should use two dice available in the pool. Use **!fiasco-availablesetups** to check which setups are available."
+        "**Available Relationships**" +
+        availableSetupsPerType(message, "relationships")
     );
+    message.channel.send(
+        "**Available Needs**" + availableSetupsPerType(message, "needs")
+    );
+    message.channel.send(
+        "**Available Locations**" + availableSetupsPerType(message, "locations")
+    );
+    message.channel.send(
+        "**Available Objects**" + availableSetupsPerType(message, "objects")
+    );
+}
 
-    return;
-  }
-
-  //TODO: add setup to players
-  if (
-    !(
-      otherPlayer in
-      servers[message.guild.id][message.channel.id].players[message.author.id]
-        .setups
-    )
-  ) {
-    servers[message.guild.id][message.channel.id].players[
-      message.author.id
-    ].setups[otherPlayer] = [];
-  }
-  if (
-    !(
-      message.author.id in
-      servers[message.guild.id][message.channel.id].players[otherPlayer].setups
-    )
-  ) {
-    servers[message.guild.id][message.channel.id].players[otherPlayer].setups[
-      message.author.id
-    ] = [];
-  }
-
-  /* Remove dice */
-  for (var i = 2; i <= 3; i++) {
-    var index = servers[message.guild.id][
-      message.channel.id
-    ].dicepool.values.indexOf(parseInt(params[i], 10));
-    if (index == -1) {
-      logging(
-        "addSetup> try to remove unexisting die " +
-          params[i] +
-          " from " +
-          servers[message.guild.id][message.channel.id].dicepool.values,
-        (type = "ERROR")
-      );
-      abortGame(message, params);
-      message.channel.send(
-        "Internal error (try to remove unexisting die). Game aborted."
-      );
-      return;
+function addSetup(message, params) {
+    if (servers[message.guild.id][message.channel.id].gameStatus != 1) {
+        logging("addSetup> called out of Setup Phase");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> add a setup makes sense just in Setup Phase (run **__!fiasco-status__** to check status of the game)."
+        );
+        return;
     }
-    servers[message.guild.id][message.channel.id].dicepool.values.splice(
-      index,
-      1
+
+    if (params.length < 4) {
+        logging("addSetup> less than 4 parameters");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> **!fiasco-addSetup** usage: *!fiasco-addSetup <type> <player> <typeDie> <detailDie>*."
+        );
+        return;
+    }
+
+    if (!["relationship", "object", "need", "location"].includes(params[0])) {
+        logging("addSetup> type invalid: " + params[0]);
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> " +
+            params[0] +
+            " is not a valid setup. Setup types: *relationship, object, need* or *location*"
+        );
+        return;
+    }
+
+    if (!(params[1].startsWith("<@") && params[1].endsWith(">"))) {
+        logging("addSetup> player not mentioned: " + params[1]);
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> you should mention the player you'll have a relationship with."
+        );
+        return;
+    }
+
+    var otherPlayer = params[1].slice(2, -1);
+    if (otherPlayer.startsWith("!")) otherPlayer = otherPlayer.slice(1);
+
+    if (otherPlayer === message.author.id) {
+        logging("addSetup> try to create a relationship with itself");
+        message.channel.send(
+            "<@" + message.author.id + "> no one can add a relationship with itself."
+        );
+        return;
+    }
+
+    if (!(otherPlayer in servers[message.guild.id][message.channel.id].players)) {
+        logging(
+            "addSetup> try to create a relationship with a non-player: " +
+            params[1] +
+            ". Players: " +
+            Object.keys(servers[message.guild.id][message.channel.id].players)
+        );
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> " +
+            params[1] +
+            " isn't listed as a player. Use **!fiasco-players** to check who's playing this game."
+        );
+
+        return;
+    }
+
+    if (
+        servers[message.guild.id][message.channel.id].dicepool.values.filter(
+            (x) => x == params[2]
+        ).length < 1 ||
+        servers[message.guild.id][message.channel.id].dicepool.values.filter(
+            (x) => x == params[3]
+        ).length < (params[2] != params[3] ? 1 : 2)
+    ) {
+        logging(
+            "addSetup> " +
+            params[2] +
+            " and " +
+            params[3] +
+            " should be valid dice. Available dice: " +
+            servers[message.guild.id][message.channel.id].dicepool.values
+        );
+
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> you should use two dice available in the pool. Use **!fiasco-availablesetups** to check which setups are available."
+        );
+
+        return;
+    }
+
+    //TODO: add setup to players
+    if (
+        !(
+            otherPlayer in
+            servers[message.guild.id][message.channel.id].players[message.author.id]
+                .setups
+        )
+    ) {
+        servers[message.guild.id][message.channel.id].players[
+            message.author.id
+        ].setups[otherPlayer] = [];
+    }
+    if (
+        !(
+            message.author.id in
+            servers[message.guild.id][message.channel.id].players[otherPlayer].setups
+        )
+    ) {
+        servers[message.guild.id][message.channel.id].players[otherPlayer].setups[
+            message.author.id
+        ] = [];
+    }
+
+    /* Remove dice */
+    for (var i = 2; i <= 3; i++) {
+        var index = servers[message.guild.id][
+            message.channel.id
+        ].dicepool.values.indexOf(parseInt(params[i], 10));
+        if (index == -1) {
+            logging(
+                "addSetup> try to remove unexisting die " +
+                params[i] +
+                " from " +
+                servers[message.guild.id][message.channel.id].dicepool.values,
+                (type = "ERROR")
+            );
+            abortGame(message, params);
+            message.channel.send(
+                "Internal error (try to remove unexisting die). Game aborted."
+            );
+            return;
+        }
+        servers[message.guild.id][message.channel.id].dicepool.values.splice(
+            index,
+            1
+        );
+    }
+
+    var setupCreated =
+        params[0] +
+        ": (" +
+        servers[message.guild.id][message.channel.id].playset[params[0] + "s"][
+        params[2]
+        ]["type"] +
+        ") " +
+        servers[message.guild.id][message.channel.id].playset[params[0] + "s"][
+        params[2]
+        ]["descriptions"][params[3]];
+
+    servers[message.guild.id][message.channel.id].players[
+        message.author.id
+    ].setups[otherPlayer].push(setupCreated);
+
+    servers[message.guild.id][message.channel.id].players[otherPlayer].setups[
+        message.author.id
+    ].push(setupCreated);
+
+    logging(
+        "addSetup> setup " +
+        setupCreated +
+        " added to users " +
+        message.author.id +
+        " and " +
+        otherPlayer
     );
-  }
 
-  var setupCreated =
-    params[0] +
-    ": (" +
-    servers[message.guild.id][message.channel.id].playset[params[0] + "s"][
-      params[2]
-    ]["type"] +
-    ") " +
-    servers[message.guild.id][message.channel.id].playset[params[0] + "s"][
-      params[2]
-    ]["descriptions"][params[3]];
+    message.channel.send(
+        "<@" +
+        message.author.id +
+        "> setup added. Run **!fiasco-setups** to list all setups defined and **!fiasco-availablesetups** to check new available setups."
+    );
 
-  servers[message.guild.id][message.channel.id].players[
-    message.author.id
-  ].setups[otherPlayer].push(setupCreated);
-
-  servers[message.guild.id][message.channel.id].players[otherPlayer].setups[
-    message.author.id
-  ].push(setupCreated);
-
-  logging(
-    "addSetup> setup " +
-      setupCreated +
-      " added to users " +
-      message.author.id +
-      " and " +
-      otherPlayer
-  );
-
-  message.channel.send(
-    "<@" +
-      message.author.id +
-      "> setup added. Run **!fiasco-setups** to list all setups defined and **!fiasco-availablesetups** to check new available setups."
-  );
-
-  if (
-    servers[message.guild.id][message.channel.id].dicepool.values.length == 0
-  ) {
-    servers[message.guild.id][message.channel.id].gameStatus = 2;
-    message.channel.send("Setups defined. Act One started!");
-  }
+    if (
+        servers[message.guild.id][message.channel.id].dicepool.values.length == 0
+    ) {
+        servers[message.guild.id][message.channel.id].gameStatus = 2;
+        message.channel.send("Setups defined. Act One started!");
+    }
 }
 
 function abortGame(message, params) {
-  if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
-    logging("abort> Game already not running.");
-    message.channel.send(
-      "<@" + message.author.id + "> game already not running."
-    );
-    return;
-  }
+    if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
+        logging("abort> Game already not running.");
+        message.channel.send(
+            "<@" + message.author.id + "> game already not running."
+        );
+        return;
+    }
 
-  servers[message.guild.id][message.channel.id].gameStatus = 0;
-  logging("abort> Stopping game.");
-  message.channel.send(
-    "<@" +
-      message.author.id +
-      "> game aborted. Run **!fiasco-start** to start a new game with same players."
-  );
+    servers[message.guild.id][message.channel.id].gameStatus = 0;
+    logging("abort> Stopping game.");
+    message.channel.send(
+        "<@" +
+        message.author.id +
+        "> game aborted. Run **!fiasco-start** to start a new game with same players."
+    );
 }
 
 function listSetups(message, params) {
-  if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
-    logging("listSetups> Game not running.");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> game is not running (run **!fiasco-start** to start a new game)."
-    );
-    return;
-  }
-  for (var player in servers[message.guild.id][message.channel.id].players) {
-    var setupsMessage = `<@${player}> setups:`;
-    for (var otherPlayer in servers[message.guild.id][message.channel.id]
-      .players[player].setups) {
-      for (
-        var i = 0;
-        i <
-        servers[message.guild.id][message.channel.id].players[player].setups[
-          otherPlayer
-        ].length;
-        i++
-      ) {
-        setupsMessage +=
-          `
-` +
-          servers[message.guild.id][message.channel.id].players[player].setups[
-            otherPlayer
-          ][i] +
-          ` with <@${otherPlayer}>`;
-      }
+    if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
+        logging("listSetups> Game not running.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> game is not running (run **!fiasco-start** to start a new game)."
+        );
+        return;
     }
-    message.channel.send(setupsMessage);
-  }
-  logging("listSetups> setups listed.");
+    for (var player in servers[message.guild.id][message.channel.id].players) {
+        var setupsMessage = `<@${player}> setups:`;
+        for (var otherPlayer in servers[message.guild.id][message.channel.id]
+            .players[player].setups) {
+            for (
+                var i = 0;
+                i <
+                servers[message.guild.id][message.channel.id].players[player].setups[
+                    otherPlayer
+                ].length;
+                i++
+            ) {
+                setupsMessage +=
+                    `
+` +
+                    servers[message.guild.id][message.channel.id].players[player].setups[
+                    otherPlayer
+                    ][i] +
+                    ` with <@${otherPlayer}>`;
+            }
+        }
+        message.channel.send(setupsMessage);
+    }
+    logging("listSetups> setups listed.");
 }
 
 function listDicepool(message, params) {
-  if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
-    logging("listDicepool> Game not running.");
+    if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
+        logging("listDicepool> Game not running.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> game is not running (run **!fiasco-start** to start a new game)."
+        );
+        return;
+    }
     message.channel.send(
-      "<@" +
+        "<@" +
         message.author.id +
-        "> game is not running (run **!fiasco-start** to start a new game)."
+        "> available dice: " +
+        servers[message.guild.id][message.channel.id].dicepool.white +
+        " white and " +
+        servers[message.guild.id][message.channel.id].dicepool.black +
+        " black."
     );
-    return;
-  }
-  message.channel.send(
-    "<@" +
-      message.author.id +
-      "> available dice: " +
-      servers[message.guild.id][message.channel.id].dicepool.white +
-      " white and " +
-      servers[message.guild.id][message.channel.id].dicepool.black +
-      " black."
-  );
 
-  logging("listDicepool> dicepool listed.");
+    logging("listDicepool> dicepool listed.");
 }
 
 function abortGame(message, params) {
-  if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
-    logging("abort> Game already not running.");
-    message.channel.send(
-      "<@" + message.author.id + "> game already not running."
-    );
-    return;
-  }
+    if (servers[message.guild.id][message.channel.id].gameStatus == 0) {
+        logging("abort> Game already not running.");
+        message.channel.send(
+            "<@" + message.author.id + "> game already not running."
+        );
+        return;
+    }
 
-  servers[message.guild.id][message.channel.id].gameStatus = 0;
-  logging("abort> Stopping game.");
-  message.channel.send(
-    "<@" +
-      message.author.id +
-      "> game aborted. Run **!fiasco-start** to start a new game with same players."
-  );
+    servers[message.guild.id][message.channel.id].gameStatus = 0;
+    logging("abort> Stopping game.");
+    message.channel.send(
+        "<@" +
+        message.author.id +
+        "> game aborted. Run **!fiasco-start** to start a new game with same players."
+    );
 }
 
 function startScene(message, params) {
-  if (
-    ![2, 4].includes(servers[message.guild.id][message.channel.id].gameStatus)
-  ) {
-    logging("startScene> Called out of an act.");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> scenes can only be started on acts (run **!fiasco-status** to see current status of a game)."
-    );
-  } else if (
-    params.length == 0 ||
-    !["establish", "resolve"].includes(params[0])
-  ) {
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> usage: __!fiasco-scene <type>__ (Types: *establish* or *resolve*)."
-    );
-    logging("startScene> invalid params: " + params);
-  } else if (
-    !Object.keys(
-      servers[message.guild.id][message.channel.id].players
-    ).includes(message.author.id)
-  ) {
-    logging("startScene> " + message.author.id + " is not a player.");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> only registered players can start scenes (run **!fiasco-players** to see currently registered players)."
-    );
-  } else if (servers[message.guild.id][message.channel.id].scene.active) {
-    logging("startScene> scene already running.");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> already running a scene requested by <@ " +
-        servers[message.guild.id][message.channel.id].scene.player +
-        "> to " +
-        servers[message.guild.id][message.channel.id].scene.type +
-        " with outcome " +
-        servers[message.guild.id][message.channel.id].scene.outcome +
-        "."
-    );
-  } else {
-    servers[message.guild.id][message.channel.id].scene = {
-      type: params[0],
-      active: true,
-      player: message.author.id,
-      outcome: "undefined"
-    };
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> request to " +
-        params[0] +
-        " a scene. Current outcomes available: " +
-        servers[message.guild.id][message.channel.id].dicepool.white +
-        " positive(s) and " +
-        servers[message.guild.id][message.channel.id].dicepool.black +
-        " negative(s)."
-    );
-    logging(
-      "startScene> " +
-        message.author.id +
-        " requested to " +
-        params[0] +
-        " a scene."
-    );
-  }
+    if (
+        ![2, 4].includes(servers[message.guild.id][message.channel.id].gameStatus)
+    ) {
+        logging("startScene> Called out of an act.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> scenes can only be started on acts (run **!fiasco-status** to see current status of a game)."
+        );
+    } else if (
+        params.length == 0 ||
+        !["establish", "resolve"].includes(params[0])
+    ) {
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> usage: __!fiasco-scene <type>__ (Types: *establish* or *resolve*)."
+        );
+        logging("startScene> invalid params: " + params);
+    } else if (
+        !Object.keys(
+            servers[message.guild.id][message.channel.id].players
+        ).includes(message.author.id)
+    ) {
+        logging("startScene> " + message.author.id + " is not a player.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> only registered players can start scenes (run **!fiasco-players** to see currently registered players)."
+        );
+    } else if (servers[message.guild.id][message.channel.id].scene.active) {
+        logging("startScene> scene already running.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> already running a scene requested by <@ " +
+            servers[message.guild.id][message.channel.id].scene.player +
+            "> to " +
+            servers[message.guild.id][message.channel.id].scene.type +
+            " with outcome " +
+            servers[message.guild.id][message.channel.id].scene.outcome +
+            "."
+        );
+    } else {
+        servers[message.guild.id][message.channel.id].scene = {
+            type: params[0],
+            active: true,
+            player: message.author.id,
+            outcome: "undefined",
+        };
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> request to " +
+            params[0] +
+            " a scene. Current outcomes available: " +
+            servers[message.guild.id][message.channel.id].dicepool.white +
+            " positive(s) and " +
+            servers[message.guild.id][message.channel.id].dicepool.black +
+            " negative(s)."
+        );
+        logging(
+            "startScene> " +
+            message.author.id +
+            " requested to " +
+            params[0] +
+            " a scene."
+        );
+    }
 }
 
 function setOutcome(message, params) {
-  if (
-    ![2, 4].includes(servers[message.guild.id][message.channel.id].gameStatus)
-  ) {
-    logging("setOutcome> Called out of an act.");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> outcomes can only be set on acts (run **!fiasco-status** to see current status of a game)."
-    );
-  } else if (
-    params.length == 0 ||
-    !["negative", "positive"].includes(params[0])
-  ) {
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> usage: __!fiasco-outcome <type>__ (Types: *positive* or *negative*)."
-    );
-    logging("setOutcome> invalid params: " + params);
-  } else if (
-    !Object.keys(
-      servers[message.guild.id][message.channel.id].players
-    ).includes(message.author.id)
-  ) {
-    logging("setOutcome> " + message.author.id + " is not a player.");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> only registered players can set outcomes (run **!fiasco-players** to see currently registered players)."
-    );
-  } else if (!servers[message.guild.id][message.channel.id].scene.active) {
-    logging("setOutcome> scene not running.");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> scene not running (run **!fiasco-scene <type>** to start a new scene)."
-    );
-  } else if (
-    servers[message.guild.id][message.channel.id].scene.outcome != "undefined"
-  ) {
-    logging(
-      "setOutcome> outcome already defined as " +
-        servers[message.guild.id][message.channel.id].scene.outcome
-    );
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> outcome already defined as " +
-        servers[message.guild.id][message.channel.id].scene.outcome +
-        "."
-    );
-  } else if (
-    servers[message.guild.id][message.channel.id].scene.type == "establish" &&
-    servers[message.guild.id][message.channel.id].scene.player ==
-      message.author.id
-  ) {
-    logging("setOutcome> try to set outcome for own establishing scene.");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> other players should decide the outcome of your establishing scene."
-    );
-  } else if (
-    servers[message.guild.id][message.channel.id].scene.type == "resolve" &&
-    servers[message.guild.id][message.channel.id].scene.player !=
-      message.author.id
-  ) {
-    logging("setOutcome> try to set outcome for other player resolving scene.");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> only <@" +
-        servers[message.guild.id][message.channel.id].scene.player +
-        "> can set the outcome of the resolving scene."
-    );
-  } else if (
-    params[0] == "positive" &&
-    servers[message.guild.id][message.channel.id].dicepool.white == 0
-  ) {
-    logging(
-      "setOutcome> try to set positive outcome without white dice available."
-    );
-    message.channel.send(
-      "<@" + message.author.id + "> no more white dice available."
-    );
-  } else if (
-    params[0] == "negative" &&
-    servers[message.guild.id][message.channel.id].dicepool.black == 0
-  ) {
-    logging(
-      "setOutcome> try to set negative outcome without black dice available."
-    );
-    message.channel.send(
-      "<@" + message.author.id + "> no more black dice available."
-    );
-  } else {
-    if (params[0] == "positive") {
-      servers[message.guild.id][message.channel.id].dicepool.white -= 1;
+    if (
+        ![2, 4].includes(servers[message.guild.id][message.channel.id].gameStatus)
+    ) {
+        logging("setOutcome> Called out of an act.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> outcomes can only be set on acts (run **!fiasco-status** to see current status of a game)."
+        );
+    } else if (
+        params.length == 0 ||
+        !["negative", "positive"].includes(params[0])
+    ) {
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> usage: __!fiasco-outcome <type>__ (Types: *positive* or *negative*)."
+        );
+        logging("setOutcome> invalid params: " + params);
+    } else if (
+        !Object.keys(
+            servers[message.guild.id][message.channel.id].players
+        ).includes(message.author.id)
+    ) {
+        logging("setOutcome> " + message.author.id + " is not a player.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> only registered players can set outcomes (run **!fiasco-players** to see currently registered players)."
+        );
+    } else if (!servers[message.guild.id][message.channel.id].scene.active) {
+        logging("setOutcome> scene not running.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> scene not running (run **!fiasco-scene <type>** to start a new scene)."
+        );
+    } else if (
+        servers[message.guild.id][message.channel.id].scene.outcome != "undefined"
+    ) {
+        logging(
+            "setOutcome> outcome already defined as " +
+            servers[message.guild.id][message.channel.id].scene.outcome
+        );
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> outcome already defined as " +
+            servers[message.guild.id][message.channel.id].scene.outcome +
+            "."
+        );
+    } else if (
+        servers[message.guild.id][message.channel.id].scene.type == "establish" &&
+        servers[message.guild.id][message.channel.id].scene.player ==
+        message.author.id
+    ) {
+        logging("setOutcome> try to set outcome for own establishing scene.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> other players should decide the outcome of your establishing scene."
+        );
+    } else if (
+        servers[message.guild.id][message.channel.id].scene.type == "resolve" &&
+        servers[message.guild.id][message.channel.id].scene.player !=
+        message.author.id
+    ) {
+        logging("setOutcome> try to set outcome for other player resolving scene.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> only <@" +
+            servers[message.guild.id][message.channel.id].scene.player +
+            "> can set the outcome of the resolving scene."
+        );
+    } else if (
+        params[0] == "positive" &&
+        servers[message.guild.id][message.channel.id].dicepool.white == 0
+    ) {
+        logging(
+            "setOutcome> try to set positive outcome without white dice available."
+        );
+        message.channel.send(
+            "<@" + message.author.id + "> no more white dice available."
+        );
+    } else if (
+        params[0] == "negative" &&
+        servers[message.guild.id][message.channel.id].dicepool.black == 0
+    ) {
+        logging(
+            "setOutcome> try to set negative outcome without black dice available."
+        );
+        message.channel.send(
+            "<@" + message.author.id + "> no more black dice available."
+        );
     } else {
-      servers[message.guild.id][message.channel.id].dicepool.black -= 1;
+        if (params[0] == "positive") {
+            servers[message.guild.id][message.channel.id].dicepool.white -= 1;
+        } else {
+            servers[message.guild.id][message.channel.id].dicepool.black -= 1;
+        }
+        servers[message.guild.id][message.channel.id].scene.outcome = params[0];
+        logging("setOutcome> setting " + params[0] + " outcome.");
+        message.channel.send(
+            "<@" + message.author.id + "> outcome now defined as " + params[0] + "."
+        );
+        if (servers[message.guild.id][message.channel.id].gameStatus == 4) {
+            //Act two
+            if (params[0] == "positive") {
+                servers[message.guild.id][message.channel.id].players[
+                    servers[message.guild.id][message.channel.id].scene.player
+                ].whiteDice += 1;
+            } else {
+                //negative
+                servers[message.guild.id][message.channel.id].players[
+                    servers[message.guild.id][message.channel.id].scene.player
+                ].blackDice += 1;
+            }
+            servers[message.guild.id][message.channel.id].scene.active = false;
+            if (
+                servers[message.guild.id][message.channel.id].dicepool.white +
+                servers[message.guild.id][message.channel.id].dicepool.black ==
+                0
+            ) {
+                servers[message.guild.id][message.channel.id].gameStatus = 5;
+            }
+            message.channel.send(
+                "<@" +
+                message.author.id +
+                "> Last piece of Act Two (run __!fiasco-aftermath__ to run aftermath after finishing the scene)."
+            );
+        }
     }
-    servers[message.guild.id][message.channel.id].scene.outcome = params[0];
-    logging("setOutcome> setting " + params[0] + " outcome.");
-    message.channel.send(
-      "<@" + message.author.id + "> outcome now defined as " + params[0] + "."
-    );
-    if (servers[message.guild.id][message.channel.id].gameStatus == 4) {
-      //Act two
-      if (params[0] == "positive") {
-        servers[message.guild.id][message.channel.id].players[
-          servers[message.guild.id][message.channel.id].scene.player
-        ].whiteDice += 1;
-      } else {
-        //negative
-        servers[message.guild.id][message.channel.id].players[
-          servers[message.guild.id][message.channel.id].scene.player
-        ].blackDice += 1;
-      }
-      servers[message.guild.id][message.channel.id].scene.active = false;
-      if (
-        servers[message.guild.id][message.channel.id].dicepool.white +
-          servers[message.guild.id][message.channel.id].dicepool.black ==
-        0
-      ) {
-        servers[message.guild.id][message.channel.id].gameStatus = 5;
-      }
-      message.channel.send(
-        "<@" +
-          message.author.id +
-          "> Last piece of Act Two (run __!fiasco-aftermath__ to run aftermath after finishing the scene)."
-      );
-    }
-  }
 }
 
 function giveDie(message, params) {
-  if (servers[message.guild.id][message.channel.id].gameStatus != 2) {
-    logging("giveDie> Called out of act one.");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> dice can only be given on Act One (run **!fiasco-status** to see current status of a game)."
-    );
-  } else if (!servers[message.guild.id][message.channel.id].scene.active) {
-    logging("giveDie> scene not running.");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> scene not running (run **!fiasco-scene <type>** to start a new scene)."
-    );
-  } else if (
-    message.author.id !=
-    servers[message.guild.id][message.channel.id].scene.player
-  ) {
-    logging(
-      "giveDie> " +
-        message.author.id +
-        " is not the current player (" +
-        servers[message.guild.id][message.channel.id].scene.player +
-        ")."
-    );
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> only current player (<@" +
-        servers[message.guild.id][message.channel.id].scene.player +
-        ">) can give the die."
-    );
-  } else if (
-    servers[message.guild.id][message.channel.id].scene.outcome == "undefined"
-  ) {
-    logging("giveDie> outcome not defined.");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> outcome should be defined before giving die (run **!fiasco-outcome <type>** to define an outcome)."
-    );
-  } else if (
-    params.length == 0 ||
-    (!params[0].startsWith("<@") || !params[0].endsWith(">"))
-  ) {
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> usage: __!fiasco-givedie <player>__ (you should mention the player)."
-    );
-    logging("giveDie> no player mentioned in params. Params: " + params + ".");
-  } else {
-    var playerToReceive = params[0].slice(2, -1);
-    if (playerToReceive.startsWith("!"))
-      playerToReceive = playerToReceive.slice(1);
-    if (
-      !(
-        playerToReceive in servers[message.guild.id][message.channel.id].players
-      )
-    ) {
-      logging(
-        "giveDie> user mentioned (" + playerToReceive + ") is not a player."
-      );
-      message.channel.send(
-        "<@" +
-          message.author.id +
-          "> user <@" +
-          playerToReceive +
-          "> is not a current player (run **!fiasco-players** to list current players)."
-      );
-    } else if (
-      playerToReceive ==
-      servers[message.guild.id][message.channel.id].scene.player
-    ) {
-      logging("giveDie> trying to give a die to self.");
-      message.channel.send(
-        "<@" +
-          message.author.id +
-          "> you should choose another player to receive the die."
-      );
-    } else {
-      logging(
-        "giveDie> giving a " +
-          servers[message.guild.id][message.channel.id].scene.outcome +
-          " die to player " +
-          playerToReceive
-      );
-      message.channel.send(
-        "<@" +
-          message.author.id +
-          "> giving a " +
-          (servers[message.guild.id][message.channel.id].scene.outcome ==
-          "positive"
-            ? "white"
-            : "black") +
-          " die to <@" +
-          playerToReceive +
-          ">."
-      );
-
-      if (
-        servers[message.guild.id][message.channel.id].scene.outcome ==
-        "positive"
-      ) {
-        servers[message.guild.id][message.channel.id].players[
-          playerToReceive
-        ].whiteDice += 1;
-      } else {
-        servers[message.guild.id][message.channel.id].players[
-          playerToReceive
-        ].blackDice += 1;
-      }
-      servers[message.guild.id][message.channel.id].scene.active = false;
-      if (
-        servers[message.guild.id][message.channel.id].dicepool.white +
-          servers[message.guild.id][message.channel.id].dicepool.black ==
-        Object.keys(servers[message.guild.id][message.channel.id].players)
-          .length *
-          2
-      ) {
+    if (servers[message.guild.id][message.channel.id].gameStatus != 2) {
+        logging("giveDie> Called out of act one.");
         message.channel.send(
-          "Last piece of Act One (run __!fiasco-tilt__ to run tilt after finishing the scene)."
+            "<@" +
+            message.author.id +
+            "> dice can only be given on Act One (run **!fiasco-status** to see current status of a game)."
         );
-        servers[message.guild.id][message.channel.id].gameStatus = 3;
-      }
+    } else if (!servers[message.guild.id][message.channel.id].scene.active) {
+        logging("giveDie> scene not running.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> scene not running (run **!fiasco-scene <type>** to start a new scene)."
+        );
+    } else if (
+        message.author.id !=
+        servers[message.guild.id][message.channel.id].scene.player
+    ) {
+        logging(
+            "giveDie> " +
+            message.author.id +
+            " is not the current player (" +
+            servers[message.guild.id][message.channel.id].scene.player +
+            ")."
+        );
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> only current player (<@" +
+            servers[message.guild.id][message.channel.id].scene.player +
+            ">) can give the die."
+        );
+    } else if (
+        servers[message.guild.id][message.channel.id].scene.outcome == "undefined"
+    ) {
+        logging("giveDie> outcome not defined.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> outcome should be defined before giving die (run **!fiasco-outcome <type>** to define an outcome)."
+        );
+    } else if (
+        params.length == 0 ||
+        !params[0].startsWith("<@") ||
+        !params[0].endsWith(">")
+    ) {
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> usage: __!fiasco-givedie <player>__ (you should mention the player)."
+        );
+        logging("giveDie> no player mentioned in params. Params: " + params + ".");
+    } else {
+        var playerToReceive = params[0].slice(2, -1);
+        if (playerToReceive.startsWith("!"))
+            playerToReceive = playerToReceive.slice(1);
+        if (
+            !(
+                playerToReceive in servers[message.guild.id][message.channel.id].players
+            )
+        ) {
+            logging(
+                "giveDie> user mentioned (" + playerToReceive + ") is not a player."
+            );
+            message.channel.send(
+                "<@" +
+                message.author.id +
+                "> user <@" +
+                playerToReceive +
+                "> is not a current player (run **!fiasco-players** to list current players)."
+            );
+        } else if (
+            playerToReceive ==
+            servers[message.guild.id][message.channel.id].scene.player
+        ) {
+            logging("giveDie> trying to give a die to self.");
+            message.channel.send(
+                "<@" +
+                message.author.id +
+                "> you should choose another player to receive the die."
+            );
+        } else {
+            logging(
+                "giveDie> giving a " +
+                servers[message.guild.id][message.channel.id].scene.outcome +
+                " die to player " +
+                playerToReceive
+            );
+            message.channel.send(
+                "<@" +
+                message.author.id +
+                "> giving a " +
+                (servers[message.guild.id][message.channel.id].scene.outcome ==
+                    "positive"
+                    ? "white"
+                    : "black") +
+                " die to <@" +
+                playerToReceive +
+                ">."
+            );
+
+            if (
+                servers[message.guild.id][message.channel.id].scene.outcome ==
+                "positive"
+            ) {
+                servers[message.guild.id][message.channel.id].players[
+                    playerToReceive
+                ].whiteDice += 1;
+            } else {
+                servers[message.guild.id][message.channel.id].players[
+                    playerToReceive
+                ].blackDice += 1;
+            }
+            servers[message.guild.id][message.channel.id].scene.active = false;
+            if (
+                servers[message.guild.id][message.channel.id].dicepool.white +
+                servers[message.guild.id][message.channel.id].dicepool.black ==
+                Object.keys(servers[message.guild.id][message.channel.id].players)
+                    .length *
+                2
+            ) {
+                message.channel.send(
+                    "Last piece of Act One (run __!fiasco-tilt__ to run tilt after finishing the scene)."
+                );
+                servers[message.guild.id][message.channel.id].gameStatus = 3;
+            }
+        }
     }
-  }
 }
 
 function runTilt(message, params) {
-  if (servers[message.guild.id][message.channel.id].gameStatus != 3) {
-    logging("runTilt> Called out of tilt.");
-    message.channel.send(
-      "<@" +
-        message.author.id +
-        "> tilt can only be called at the end of Act One/tilt status (run **!fiasco-status** to see current status of a game)."
-    );
-    return;
-  }
-  logging("runTilt> defining players to define tilt.");
-  maxWhite = ["", -100, -1];
-  maxBlack = ["", -100, -1];
-  for (var player in servers[message.guild.id][message.channel.id].players) {
-    var white = rollDice(
-      servers[message.guild.id][message.channel.id].players[player].whiteDice
-    ).reduce((a, b) => a + b, 0);
-    var black = rollDice(
-      servers[message.guild.id][message.channel.id].players[player].blackDice
-    ).reduce((a, b) => a + b, 0);
-    message.channel.send(
-      "<@" + player + "> white: " + white + " / black: " + black + "."
-    );
-    var total = white + black;
-    if (
-      white - black > maxWhite[1] ||
-      (white - black == maxWhite[1] && total > maxWhite[2])
-    ) {
-      maxWhite = [player, white - black, total];
-    } else if (white - black == maxWhite[1] && total == maxWhite[2]) {
-      logging(
-        "runTilt> resolving white draw on " + maxWhite[0] + " and " + player
-      );
-      var max = 0;
-      var cur = 0;
-      do {
-        max = rollDice(
-          servers[message.guild.id][message.channel.id].players[maxWhite[0]]
-            .whiteDice +
-            servers[message.guild.id][message.channel.id].players[maxWhite[0]]
-              .blackDice +
-            1
-        ).reduce((a, b) => a + b, 0);
-        cur = rollDice(
-          servers[message.guild.id][message.channel.id].players[player]
-            .whiteDice +
-            servers[message.guild.id][message.channel.id].players[player]
-              .blackDice +
-            1
-        ).reduce((a, b) => a + b, 0);
-        logging("runTilt> " + max + " / " + cur);
-        if (cur > max) maxWhite = [player, white - black, total];
-      } while (max == cur);
+    if (servers[message.guild.id][message.channel.id].gameStatus != 3) {
+        logging("runTilt> Called out of tilt.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> tilt can only be called at the end of Act One/tilt status (run **!fiasco-status** to see current status of a game)."
+        );
+        return;
     }
-    if (
-      black - white > maxBlack[1] ||
-      (black - white == maxBlack[1] && total > maxBlack[2])
-    ) {
-      maxBlack = [player, black - white, total];
-    } else if (black - white == maxBlack[1] && total == maxBlack[2]) {
-      logging(
-        "runTilt> resolving black draw on " + maxBlack[0] + " and " + player
-      );
-      var max = 0;
-      var cur = 0;
-      do {
-        max = rollDice(
-          servers[message.guild.id][message.channel.id].players[maxBlack[0]]
-            .whiteDice +
-            servers[message.guild.id][message.channel.id].players[maxBlack[0]]
-              .blackDice
+    logging("runTilt> defining players to define tilt.");
+    maxWhite = ["", -100, -1];
+    maxBlack = ["", -100, -1];
+    for (var player in servers[message.guild.id][message.channel.id].players) {
+        var white = rollDice(
+            servers[message.guild.id][message.channel.id].players[player].whiteDice
         ).reduce((a, b) => a + b, 0);
-        cur = rollDice(
-          servers[message.guild.id][message.channel.id].players[player]
-            .whiteDice +
-            servers[message.guild.id][message.channel.id].players[player]
-              .blackDice
+        var black = rollDice(
+            servers[message.guild.id][message.channel.id].players[player].blackDice
         ).reduce((a, b) => a + b, 0);
-        logging("runTilt> " + max + " / " + cur);
-        if (cur > max) maxBlack = [player, black - white, total];
-      } while (max == cur);
-    }
-  }
-  message.channel.send(
-    "Players to run tilt: <@" +
-      maxWhite[0] +
-      "> (white) and <@" +
-      maxBlack[0] +
-      "> (black)."
-  );
-  var dicepool = rollDice(
-    Object.keys(servers[message.guild.id][message.channel.id].players).length *
-      2
-  );
-  var tiltList =
-    "**Available tilts** (dicepool: *" + dicepool.join(", ") + "*)";
-  for (var i = 1; i <= 6; i++) {
-    if (dicepool.filter(x => x === i).length >= 1) {
-      tiltList += `
-__(${i}) ${
-        servers[message.guild.id][message.channel.id].tiltTable[i.toString()][
-          "type"
-        ]
-      }__`;
-      for (var j = 1; j <= 6; j++) {
+        message.channel.send(
+            "<@" + player + "> white: " + white + " / black: " + black + "."
+        );
+        var total = white + black;
         if (
-          (i == j && dicepool.filter(x => x === j).length >= 2) ||
-          (i != j && dicepool.filter(x => x === j).length >= 1)
+            white - black > maxWhite[1] ||
+            (white - black == maxWhite[1] && total > maxWhite[2])
         ) {
-          tiltList += `
-(${i},${j}) ${
-            servers[message.guild.id][message.channel.id].tiltTable[
-              i.toString()
-            ]["descriptions"][j.toString()]
-          }`;
+            maxWhite = [player, white - black, total];
+        } else if (white - black == maxWhite[1] && total == maxWhite[2]) {
+            logging(
+                "runTilt> resolving white draw on " + maxWhite[0] + " and " + player
+            );
+            var max = 0;
+            var cur = 0;
+            do {
+                max = rollDice(
+                    servers[message.guild.id][message.channel.id].players[maxWhite[0]]
+                        .whiteDice +
+                    servers[message.guild.id][message.channel.id].players[maxWhite[0]]
+                        .blackDice +
+                    1
+                ).reduce((a, b) => a + b, 0);
+                cur = rollDice(
+                    servers[message.guild.id][message.channel.id].players[player]
+                        .whiteDice +
+                    servers[message.guild.id][message.channel.id].players[player]
+                        .blackDice +
+                    1
+                ).reduce((a, b) => a + b, 0);
+                logging("runTilt> " + max + " / " + cur);
+                if (cur > max) maxWhite = [player, white - black, total];
+            } while (max == cur);
         }
-      }
+        if (
+            black - white > maxBlack[1] ||
+            (black - white == maxBlack[1] && total > maxBlack[2])
+        ) {
+            maxBlack = [player, black - white, total];
+        } else if (black - white == maxBlack[1] && total == maxBlack[2]) {
+            logging(
+                "runTilt> resolving black draw on " + maxBlack[0] + " and " + player
+            );
+            var max = 0;
+            var cur = 0;
+            do {
+                max = rollDice(
+                    servers[message.guild.id][message.channel.id].players[maxBlack[0]]
+                        .whiteDice +
+                    servers[message.guild.id][message.channel.id].players[maxBlack[0]]
+                        .blackDice
+                ).reduce((a, b) => a + b, 0);
+                cur = rollDice(
+                    servers[message.guild.id][message.channel.id].players[player]
+                        .whiteDice +
+                    servers[message.guild.id][message.channel.id].players[player]
+                        .blackDice
+                ).reduce((a, b) => a + b, 0);
+                logging("runTilt> " + max + " / " + cur);
+                if (cur > max) maxBlack = [player, black - white, total];
+            } while (max == cur);
+        }
     }
-  }
-  message.channel.send(tiltList);
-  servers[message.guild.id][message.channel.id].gameStatus = 4;
+    message.channel.send(
+        "Players to run tilt: <@" +
+        maxWhite[0] +
+        "> (white) and <@" +
+        maxBlack[0] +
+        "> (black)."
+    );
+    var dicepool = rollDice(
+        Object.keys(servers[message.guild.id][message.channel.id].players).length *
+        2
+    );
+    var tiltList =
+        "**Available tilts** (dicepool: *" + dicepool.join(", ") + "*)";
+    for (var i = 1; i <= 6; i++) {
+        if (dicepool.filter((x) => x === i).length >= 1) {
+            tiltList += `
+__(${i}) ${servers[message.guild.id][message.channel.id].tiltTable[i.toString()][
+                "type"
+                ]
+                }__`;
+            for (var j = 1; j <= 6; j++) {
+                if (
+                    (i == j && dicepool.filter((x) => x === j).length >= 2) ||
+                    (i != j && dicepool.filter((x) => x === j).length >= 1)
+                ) {
+                    tiltList += `
+(${i},${j}) ${servers[message.guild.id][message.channel.id].tiltTable[
+                        i.toString()
+                        ]["descriptions"][j.toString()]
+                        }`;
+                }
+            }
+        }
+    }
+    message.channel.send(tiltList);
+    servers[message.guild.id][message.channel.id].gameStatus = 4;
+}
+
+function runAftermath(message, params) {
+    if (servers[message.guild.id][message.channel.id].gameStatus != 5) {
+        logging("runAftermath> Called out of aftermath.");
+        message.channel.send(
+            "<@" +
+            message.author.id +
+            "> tilt can only be called at the end of Act Two/aftermath status (run **!fiasco-status** to see current status of a game)."
+        );
+        return;
+    }
+
+    logging("runAftermath> defining aftermaths for each player.");
+
+    for (var player in servers[message.guild.id][message.channel.id].players) {
+        var white = rollDice(
+            servers[message.guild.id][message.channel.id].players[player].whiteDice
+        ).reduce((a, b) => a + b, 0);
+        var black = rollDice(
+            servers[message.guild.id][message.channel.id].players[player].blackDice
+        ).reduce((a, b) => a + b, 0);
+
+        var msg =
+            "<@" +
+            player +
+            "> White: " +
+            white +
+            " / Black: " +
+            black +
+            `
+Result: ` +
+            (white == black
+                ? "zero"
+                : white > black
+                    ? "" + (white - black) + " white"
+                    : "" + (black - white) + " black") +
+            `
+`;
+        if (white == black) {
+            msg +=
+                servers[message.guild.id][message.channel.id].aftermathTable["zero"];
+        } else if (white > black) {
+            for (aftermath in servers[message.guild.id][message.channel.id]
+                .aftermathTable["white"]) {
+                if (white - black <= aftermath.limit) {
+                    msg += aftermath.description;
+                    break;
+                }
+            }
+        } else {
+            // black > white
+            for (aftermath in servers[message.guild.id][message.channel.id]
+                .aftermathTable["black"]) {
+                if (black - white <= aftermath.limit) {
+                    msg += aftermath.description;
+                    break;
+                }
+            }
+        }
+        message.channel.send(msg);
+    }
 }
 
 function helpMessage(message, params) {
-  message.channel.send(`<@${message.author.id}>
+    message.channel.send(`<@${message.author.id}>
 **Before game starts:**
 __!fiasco-add <mentions>__: *adds players mentioned to the channel game (up to 5 players per channel)*
 __!fiasco-remove <mentions>__: *removes players mentioned to the channel game*
@@ -1206,8 +1265,8 @@ __!fiasco-outcome <type>__: *define an outcome for the scene currently being des
 __!fiasco-givedie <player>__: *give the resulting die to a player* (only in Act One)
 
 **After acts:**
-__!fiasco-tilt__: *run tilt after Act One (TBI)*
-__!fiasco-aftermath__: *run aftermath after Act Two (TBI)*
+__!fiasco-tilt__: *run tilt after Act One*
+__!fiasco-aftermath__: *run aftermath after Act Two*
 
 **While game is running:**
 __!fiasco-abort__: *abort current game (keeps registered players)*
@@ -1223,376 +1282,393 @@ __!fiasco-status__: *current status of a game (Not Running, Setup, Act One, Tilt
 For more information, check https://github.com/friarhob/fiascobot.`);
 }
 
-client.on("ready", function() {
-  logging("Hello, world. Bot started!");
-  client.user.setActivity("Fiasco!");
+client.on("ready", function () {
+    logging("Hello, world. Bot started!");
+    client.user.setActivity("Fiasco!");
 });
 
-client.on("message", function(message) {
-  if (message.author.id != config.tokens.clientID) {
-    // Prevent bot from responding to its own messages
+client.on("message", function (message) {
+    if (message.author.id != config.tokens.clientID) {
+        // Prevent bot from responding to its own messages
 
-    if (message.content.startsWith("!fiasco-")) {
-      updateServers(message);
-      //console.log(message);
+        if (message.content.startsWith("!fiasco-")) {
+            updateServers(message);
+            //console.log(message);
 
-      var fullCommand = message.content.substring(8).split(" ");
-      //console.log(fullCommand);
+            var fullCommand = message.content.substring(8).split(" ");
+            //console.log(fullCommand);
 
-      var command = fullCommand[0];
-      var params = fullCommand.slice(1);
-      //console.log(command);
-      //console.log(params);
+            var command = fullCommand[0];
+            var params = fullCommand.slice(1);
+            //console.log(command);
+            //console.log(params);
 
-      if (command == "debug") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") try to debug with params " +
-            params +
-            " on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        debug(message, params);
-      } else if (command == "add") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") try to add " +
-            params +
-            " players on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        addPlayers(message, params);
-      } else if (command == "players") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") ask to list players on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        listPlayers(message, params);
-      } else if (command == "remove") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") try to remove " +
-            params +
-            " players on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        removePlayers(message, params);
-      } else if (command == "help") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") asks for help on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        helpMessage(message, params);
-      } else if (command == "status") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") asks for status on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        checkStatus(message, params);
-      } else if (command == "start") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") try to start game on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        startGame(message, params);
-      } else if (command == "abort") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") try to abort game on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        abortGame(message, params);
-      } else if (command == "availablesetups") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") asks for available setups on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        availableSetups(message, params);
-      } else if (command == "addsetup") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") try to add a setup with params " +
-            params +
-            " on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        addSetup(message, params);
-      } else if (command == "setups") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") ask to list setups from " +
-            params +
-            " on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        listSetups(message, params);
-      } else if (command == "dicepool") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") ask the dicepool available on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        listDicepool(message, params);
-      } else if (command == "scene") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") try to start a scene with params " +
-            params +
-            " on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        startScene(message, params);
-      } else if (command == "outcome") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") try to set an outcome with params " +
-            params +
-            " on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        setOutcome(message, params);
-      } else if (command == "givedie") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") try to give a die with params " +
-            params +
-            " on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        giveDie(message, params);
-      } else if (command == "playerdice") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") ask to list players dice on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        listPlayerDice(message, params);
-      } else if (command == "tilt") {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") try to call Tilt on channel " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        runTilt(message, params);
-      } else {
-        logging(
-          "User " +
-            message.author.username +
-            " (" +
-            message.author.id +
-            ") sent the invalid command " +
-            command +
-            " at " +
-            message.channel.name +
-            " (" +
-            message.channel.id +
-            ") of server " +
-            message.guild.name +
-            " (" +
-            message.guild.id +
-            ")."
-        );
-        message.channel.send(
-          "<@" +
-            message.author.id +
-            "> I didn't understand your command. Type **!fiasco-help** for usage."
-        );
-      }
-
-      /*            playsetStr = "";
-
-            for(let [key, value] of message.attachments)
-            {
-                https.get(value.url,
-                    function(res) {
-                        res.on('data', function(data) {
-                            playsetStr+=data;
-                        });
-
-                        res.on('end', function() {
-                            console.log(playsetStr);
-                        });
-                    }
+            if (command == "debug") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") try to debug with params " +
+                    params +
+                    " on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                debug(message, params);
+            } else if (command == "add") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") try to add " +
+                    params +
+                    " players on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                addPlayers(message, params);
+            } else if (command == "players") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") ask to list players on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                listPlayers(message, params);
+            } else if (command == "remove") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") try to remove " +
+                    params +
+                    " players on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                removePlayers(message, params);
+            } else if (command == "help") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") asks for help on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                helpMessage(message, params);
+            } else if (command == "status") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") asks for status on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                checkStatus(message, params);
+            } else if (command == "start") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") try to start game on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                startGame(message, params);
+            } else if (command == "abort") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") try to abort game on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                abortGame(message, params);
+            } else if (command == "availablesetups") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") asks for available setups on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                availableSetups(message, params);
+            } else if (command == "addsetup") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") try to add a setup with params " +
+                    params +
+                    " on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                addSetup(message, params);
+            } else if (command == "setups") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") ask to list setups from " +
+                    params +
+                    " on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                listSetups(message, params);
+            } else if (command == "dicepool") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") ask the dicepool available on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                listDicepool(message, params);
+            } else if (command == "scene") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") try to start a scene with params " +
+                    params +
+                    " on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                startScene(message, params);
+            } else if (command == "outcome") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") try to set an outcome with params " +
+                    params +
+                    " on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                setOutcome(message, params);
+            } else if (command == "givedie") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") try to give a die with params " +
+                    params +
+                    " on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                giveDie(message, params);
+            } else if (command == "playerdice") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") ask to list players dice on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                listPlayerDice(message, params);
+            } else if (command == "tilt") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") try to call Tilt on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                runTilt(message, params);
+            } else if (command == "aftermath") {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") try to call aftermath on channel " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                runAftermath(message, params);
+            } else {
+                logging(
+                    "User " +
+                    message.author.username +
+                    " (" +
+                    message.author.id +
+                    ") sent the invalid command " +
+                    command +
+                    " at " +
+                    message.channel.name +
+                    " (" +
+                    message.channel.id +
+                    ") of server " +
+                    message.guild.name +
+                    " (" +
+                    message.guild.id +
+                    ")."
+                );
+                message.channel.send(
+                    "<@" +
+                    message.author.id +
+                    "> I didn't understand your command. Type **!fiasco-help** for usage."
                 );
             }
-*/
+
+            /*            playsetStr = "";
+      
+                  for(let [key, value] of message.attachments)
+                  {
+                      https.get(value.url,
+                          function(res) {
+                              res.on('data', function(data) {
+                                  playsetStr+=data;
+                              });
+      
+                              res.on('end', function() {
+                                  console.log(playsetStr);
+                              });
+                          }
+                      );
+                  }
+      */
+        }
     }
-  }
 });
 
 client.login(config.tokens.botToken);
